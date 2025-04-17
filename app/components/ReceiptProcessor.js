@@ -21,7 +21,7 @@ class BillItem {
 
 export default class ReceiptProcessor {
   constructor() {
-    this.apiKey = 'AIzaSyAbhQUHNviJ_zn7BQdUhucnZgUQzNAsp6c'; // Hardcoded API key
+    this.apiKey = process.env.GEMINI_API_KEY; // Load API key from environment variable
   }
 
   async processReceipt(imageBytes) {
