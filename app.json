@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "pagamipana",
+    "name": "Pagamipana",
     "slug": "pagamipana",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -8,14 +8,24 @@
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.example.pagamipana"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.example.pagamipana"
     },
     "web": {
       "bundler": "metro",
@@ -36,6 +46,15 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "89ad0820-75b5-41a3-8fa5-639350738fdd"
+      }
+    },
+    "owner": "luchogt"
   }
 }
