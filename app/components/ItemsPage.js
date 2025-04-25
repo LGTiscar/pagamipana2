@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 
@@ -6,27 +6,50 @@ export default function ItemsPage() {
   const router = useRouter();
   const params = useLocalSearchParams();
   
-  // Parse data from params
-  const receivedItems = params.items ? JSON.parse(params.items) : [];
-  const people = params.people ? JSON.parse(params.people) : [];
-  const paidBy = params.paidBy || null;
-  
   const [items, setItems] = useState([]);
+  const [people, setPeople] = useState([]);
+  const [paidBy, setPaidBy] = useState(null);
   const [assignments, setAssignments] = useState({});
 
+  // Parse params safely using useEffect to prevent render loops
   useEffect(() => {
-    // Initialize items from received data or use defaults if empty
-    if (receivedItems.length > 0) {
-      setItems(receivedItems);
+    try {
+      // Only parse and update if we have data and it's different
+      if (params.items) {
+        const parsedItems = JSON.parse(params.items);
+        setItems(parsedItems);
+      }
       
-      // Initialize assignments - all items initially unassigned
-      const initialAssignments = {};
-      receivedItems.forEach((item, index) => {
-        initialAssignments[index] = [];
-      });
-      setAssignments(initialAssignments);
+      if (params.people) {
+        const parsedPeople = JSON.parse(params.people);
+        setPeople(parsedPeople);
+      }
+      
+      if (params.paidBy) {
+        setPaidBy(params.paidBy);
+      }
+    } catch (error) {
+      console.error('Error parsing params:', error);
     }
-  }, [receivedItems]);
+  }, [params.items, params.people, params.paidBy]);
+  
+  // Initialize assignments separately after items are loaded
+  useEffect(() => {
+    if (items.length > 0) {
+      // Only initialize assignments if they don't exist yet
+      const initialAssignments = {};
+      items.forEach((item, index) => {
+        if (!assignments[index]) {
+          initialAssignments[index] = [];
+        }
+      });
+      
+      // Only update if there are new assignments to add
+      if (Object.keys(initialAssignments).length > 0) {
+        setAssignments(prev => ({...prev, ...initialAssignments}));
+      }
+    }
+  }, [items]);
 
   const togglePersonForItem = (itemIndex, personId) => {
     setAssignments(prevAssignments => {
@@ -190,7 +213,7 @@ export default function ItemsPage() {
                 pathname: '/components/SummaryPage',
                 params: {
                   items: JSON.stringify(items),
-                  people: params.people,
+                  people: JSON.stringify(people),
                   paidBy: paidBy,
                   assignments: JSON.stringify(assignments)
                 }
