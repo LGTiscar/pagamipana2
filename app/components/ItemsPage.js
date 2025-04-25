@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, ScrollView, Switch } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 
 export default function ItemsPage() {
@@ -10,6 +10,8 @@ export default function ItemsPage() {
   const [people, setPeople] = useState([]);
   const [paidBy, setPaidBy] = useState(null);
   const [assignments, setAssignments] = useState({});
+  const [sharedItems, setSharedItems] = useState({});
+  const [personItemQuantities, setPersonItemQuantities] = useState({});
 
   // Parse params safely using useEffect to prevent render loops
   useEffect(() => {
@@ -38,9 +40,14 @@ export default function ItemsPage() {
     if (items.length > 0) {
       // Only initialize assignments if they don't exist yet
       const initialAssignments = {};
+      const initialSharedItems = {};
+      
       items.forEach((item, index) => {
         if (!assignments[index]) {
           initialAssignments[index] = [];
+        }
+        if (sharedItems[index] === undefined) {
+          initialSharedItems[index] = false; // Default shared status is OFF
         }
       });
       
@@ -48,8 +55,50 @@ export default function ItemsPage() {
       if (Object.keys(initialAssignments).length > 0) {
         setAssignments(prev => ({...prev, ...initialAssignments}));
       }
+      
+      // Only update if there are new shared statuses to add
+      if (Object.keys(initialSharedItems).length > 0) {
+        setSharedItems(prev => ({...prev, ...initialSharedItems}));
+      }
     }
   }, [items]);
+
+  // Initialize person-item quantities when items or people change
+  useEffect(() => {
+    if (items.length > 0 && people.length > 0) {
+      const initialQuantities = {};
+      
+      // For each item
+      items.forEach((item, itemIndex) => {
+        initialQuantities[itemIndex] = {};
+        
+        // For each person, initialize quantity to 0
+        people.forEach(person => {
+          initialQuantities[itemIndex][person.id] = 0;
+        });
+      });
+      
+      // Only set if we don't already have values
+      setPersonItemQuantities(prev => {
+        const newQuantities = { ...prev };
+        
+        // Merge only missing values
+        Object.keys(initialQuantities).forEach(itemIndex => {
+          if (!newQuantities[itemIndex]) {
+            newQuantities[itemIndex] = {};
+          }
+          
+          Object.keys(initialQuantities[itemIndex]).forEach(personId => {
+            if (newQuantities[itemIndex][personId] === undefined) {
+              newQuantities[itemIndex][personId] = initialQuantities[itemIndex][personId];
+            }
+          });
+        });
+        
+        return newQuantities;
+      });
+    }
+  }, [items, people]);
 
   const togglePersonForItem = (itemIndex, personId) => {
     setAssignments(prevAssignments => {
@@ -70,6 +119,14 @@ export default function ItemsPage() {
         };
       }
     });
+  };
+
+  // Simple toggle function without any special behavior for now
+  const toggleSharedItem = (itemIndex) => {
+    setSharedItems(prev => ({
+      ...prev,
+      [itemIndex]: !prev[itemIndex]
+    }));
   };
 
   const getPersonById = (id) => {
@@ -95,7 +152,55 @@ export default function ItemsPage() {
     );
   };
 
+  // Function to increase the quantity for a person-item pair
+  const increaseQuantity = (itemIndex, personId) => {
+    setPersonItemQuantities(prev => {
+      const newQuantities = { ...prev };
+      if (!newQuantities[itemIndex]) {
+        newQuantities[itemIndex] = {};
+      }
+      
+      // Make sure the person is also assigned to this item
+      if (!assignments[itemIndex]?.includes(personId)) {
+        togglePersonForItem(itemIndex, personId);
+      }
+      
+      // Increase the quantity
+      const currentQty = newQuantities[itemIndex][personId] || 0;
+      newQuantities[itemIndex][personId] = currentQty + 1;
+      
+      return newQuantities;
+    });
+  };
+  
+  // Function to decrease the quantity for a person-item pair
+  const decreaseQuantity = (itemIndex, personId) => {
+    setPersonItemQuantities(prev => {
+      const newQuantities = { ...prev };
+      if (!newQuantities[itemIndex]) {
+        newQuantities[itemIndex] = {};
+      }
+      
+      // Decrease the quantity (minimum 0)
+      const currentQty = newQuantities[itemIndex][personId] || 0;
+      newQuantities[itemIndex][personId] = Math.max(0, currentQty - 1);
+      
+      // If quantity reaches 0, unassign the person
+      if (newQuantities[itemIndex][personId] === 0) {
+        const currentAssignment = assignments[itemIndex] || [];
+        if (currentAssignment.includes(personId)) {
+          togglePersonForItem(itemIndex, personId);
+        }
+      }
+      
+      return newQuantities;
+    });
+  };
+
   const renderItem = ({ item, index }) => {
+    const itemQuantity = item.quantity || 1;
+    const showQuantityControls = itemQuantity > 1;
+    
     return (
       <View style={styles.itemCard}>
         <View style={styles.itemHeader}>
@@ -104,38 +209,108 @@ export default function ItemsPage() {
         </View>
         
         <View style={styles.itemDetails}>
-          <Text style={styles.itemQuantity}>Qty: {item.quantity || 1}</Text>
-          <Text style={styles.itemUnitPrice}>@ ${item.unitPrice?.toFixed(2) || '0.00'}</Text>
+          <View style={styles.itemQuantityPrice}>
+            {showQuantityControls ? (
+              <View style={styles.quantityControlContainer}>
+                <Text style={styles.quantityLabel}>Quantity:</Text>
+                <View style={styles.quantityControls}>
+                  <TouchableOpacity style={styles.quantityButton}>
+                    <Text style={styles.quantityButtonText}>−</Text>
+                  </TouchableOpacity>
+                  
+                  <Text style={styles.quantityValue}>{itemQuantity}</Text>
+                  
+                  <TouchableOpacity style={styles.quantityButton}>
+                    <Text style={styles.quantityButtonText}>+</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <Text style={styles.itemQuantity}>Qty: {itemQuantity}</Text>
+            )}
+            
+            {!showQuantityControls && (
+              <Text style={styles.itemUnitPrice}>@ ${item.unitPrice?.toFixed(2) || '0.00'}</Text>
+            )}
+          </View>
+          
+          {/* Shared Switch */}
+          <View style={styles.sharedContainer}>
+            <Text style={styles.sharedLabel}>Shared</Text>
+            <Switch
+              trackColor={{ false: "#E0E0E0", true: "#A5D6A7" }}
+              thumbColor={sharedItems[index] ? "#4CAF50" : "#BDBDBD"}
+              ios_backgroundColor="#E0E0E0"
+              onValueChange={() => toggleSharedItem(index)}
+              value={sharedItems[index] || false}
+            />
+          </View>
         </View>
 
-        <Text style={styles.assignLabel}>Assign to:</Text>
-        <View style={styles.personAssignments}>
-          {people.map(person => (
-            <TouchableOpacity 
-              key={person.id}
-              style={[
-                styles.personChip,
-                (assignments[index] && assignments[index].includes(person.id)) 
-                  ? { backgroundColor: person.color } 
-                  : styles.unassignedChip
-              ]}
-              onPress={() => togglePersonForItem(index, person.id)}
-            >
-              <View style={[
-                styles.miniAvatar, 
-                { backgroundColor: person.color },
-                !(assignments[index] && assignments[index].includes(person.id)) && styles.unassignedAvatar
-              ]}>
-                <Text style={styles.miniAvatarText}>{person.initial}</Text>
-              </View>
-              <Text style={[
-                styles.personChipText,
-                (assignments[index] && assignments[index].includes(person.id)) && styles.assignedChipText
-              ]}>
-                {person.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
+        {showQuantityControls && (
+          <View style={styles.unitPriceContainer}>
+            <Text style={styles.itemUnitPrice}>@ ${item.unitPrice?.toFixed(2) || '0.00'} each</Text>
+          </View>
+        )}
+
+        {/* Show the person assignment section regardless of shared status */}
+        <View style={styles.assignmentSection}>
+          <Text style={styles.assignLabel}>Who participated in this item?</Text>
+          <View style={styles.personAssignments}>
+            {people.map(person => {
+              // Get the person's quantity for this item
+              const personQuantity = personItemQuantities[index]?.[person.id] || 0;
+              const isAssigned = assignments[index]?.includes(person.id);
+              
+              return (
+                <View key={person.id} style={styles.personQuantityContainer}>
+                  {/* New integrated bubble layout */}
+                  <View style={[
+                    styles.personBubble,
+                    isAssigned ? { borderColor: person.color } : styles.unassignedBubble
+                  ]}>
+                    {/* Avatar with initial */}
+                    <View style={[
+                      styles.miniAvatar, 
+                      { backgroundColor: person.color }
+                    ]}>
+                      <Text style={styles.miniAvatarText}>{person.initial}</Text>
+                    </View>
+                    
+                    {/* Minus Button */}
+                    {showQuantityControls && (
+                      <TouchableOpacity 
+                        style={styles.inlineMinus}
+                        onPress={() => decreaseQuantity(index, person.id)}
+                      >
+                        <Text style={styles.inlineButtonText}>−</Text>
+                      </TouchableOpacity>
+                    )}
+                    
+                    {/* Person name */}
+                    <Text style={styles.personBubbleText}>
+                      {person.name}
+                    </Text>
+                    
+                    {/* Quantity Value */}
+                    {showQuantityControls && (
+                      <Text style={styles.inlineQuantity}>{personQuantity}</Text>
+                    )}
+                    
+                    {/* Plus Button */}
+                    {showQuantityControls && (
+                      <TouchableOpacity 
+                        style={styles.inlinePlus}
+                        onPress={() => increaseQuantity(index, person.id)}
+                      >
+                        <Text style={styles.inlineButtonText}>+</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
+              );
+            })}
+          </View>
         </View>
       </View>
     );
@@ -341,7 +516,11 @@ const styles = StyleSheet.create({
   },
   itemDetails: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     marginBottom: 12,
+  },
+  itemQuantityPrice: {
+    flexDirection: 'row',
   },
   itemQuantity: {
     fontSize: 14,
@@ -351,6 +530,15 @@ const styles = StyleSheet.create({
   itemUnitPrice: {
     fontSize: 14,
     color: '#757575',
+  },
+  sharedContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  sharedLabel: {
+    fontSize: 14,
+    color: '#424242',
+    marginRight: 8,
   },
   assignLabel: {
     fontSize: 14,
@@ -398,6 +586,14 @@ const styles = StyleSheet.create({
   },
   assignedChipText: {
     color: 'white',
+    fontWeight: '500',
+  },
+  sharedByAll: {
+    marginTop: 8,
+  },
+  sharedByAllText: {
+    fontSize: 14,
+    color: '#2E7D32',
     fontWeight: '500',
   },
   emptyState: {
@@ -457,5 +653,120 @@ const styles = StyleSheet.create({
   disabledButton: {
     backgroundColor: '#A5D6A7',
     opacity: 0.7,
+  },
+  quantityControlContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  quantityLabel: {
+    fontSize: 14,
+    color: '#757575',
+    marginRight: 10,
+  },
+  quantityControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  quantityButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#E0E0E0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quantityButtonText: {
+    fontSize: 18,
+    color: '#424242',
+  },
+  quantityValue: {
+    fontSize: 16,
+    color: '#424242',
+    marginHorizontal: 10,
+  },
+  unitPriceContainer: {
+    marginTop: 8,
+  },
+  assignmentSection: {
+    marginTop: 12,
+  },
+  personQuantityContainer: {
+    marginBottom: 10,
+    marginRight: 8,
+  },
+  personQuantityChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+    borderRadius: 15,
+    paddingRight: 10,
+    marginRight: 8,
+    borderWidth: 1,
+  },
+  personItemQuantity: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 10,
+  },
+  smallQuantityButton: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#E0E0E0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  smallQuantityButtonText: {
+    fontSize: 14,
+    color: '#424242',
+  },
+  personItemQtyValue: {
+    fontSize: 14,
+    color: '#424242',
+    marginHorizontal: 5,
+  },
+  personRightControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 10,
+  },
+  personBubble: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+    borderRadius: 25,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  unassignedBubble: {
+    backgroundColor: '#F5F5F5',
+    borderColor: '#E0E0E0',
+  },
+  personBubbleText: {
+    fontSize: 14,
+    marginHorizontal: 8,
+    color: '#424242',
+  },
+  inlineMinus: {
+    marginLeft: 8,
+    padding: 3,
+  },
+  inlinePlus: {
+    marginLeft: 8,
+    padding: 3,
+  },
+  inlineButtonText: {
+    fontSize: 16,
+    color: '#757575',
+    fontWeight: '500',
+  },
+  inlineQuantity: {
+    fontSize: 14,
+    color: '#424242',
+    marginLeft: 8,
+    width: 18,
+    textAlign: 'center',
   },
 });
