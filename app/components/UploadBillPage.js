@@ -152,11 +152,8 @@ export default function UploadBillPage({ navigation }) {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.nextButtonContainer}>
-          <TouchableOpacity style={styles.nextNavigationButton} onPress={() => navigation.navigate('People')}>
-            <Text style={styles.nextNavigationButtonText}>Next →</Text>
-          </TouchableOpacity>
-        </View>
+        {/* Added spacer view for extra margin */}
+        <View style={styles.spacer} />
 
         {/* OCR Tips */}
         <View style={styles.tipsContainer}>
@@ -218,6 +215,7 @@ const styles = StyleSheet.create({
   analyzeButtonContainer: {
     alignItems: 'center',
     marginTop: 10,
+    marginBottom: 10,
   },
   analyzeButton: {
     backgroundColor: '#4CAF50',
@@ -261,5 +259,17 @@ const styles = StyleSheet.create({
   disabledButton: {
     backgroundColor: '#A5D6A7',
     opacity: 0.7,
+  },
+  // Added spacer style
+  spacer: {
+    height: 20, // Add 20 points of vertical space
+  },
+  tipsContainer: { 
+    padding: 15, 
+    backgroundColor: '#F1F8E9', 
+    borderRadius: 5, 
+    marginTop: 10, // Added top margin 
+    marginBottom: 20, 
+    width: '100%' 
   },
 });
