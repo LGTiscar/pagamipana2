@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import ReceiptProcessor from './ReceiptProcessor';
+import { useRouter } from 'expo-router';
 
-export default function UploadBillPage({ navigation }) {
+export default function UploadBillPage() {
+  const router = useRouter();
   const [uploadedImagePath, setUploadedImagePath] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const receiptProcessor = new ReceiptProcessor();
@@ -94,8 +96,11 @@ export default function UploadBillPage({ navigation }) {
       // Reset processing state before navigation
       setIsProcessing(false);
       
-      // Automatically navigate to the next page with the items data
-      navigation.navigate('People', { items });
+      // Use router instead of navigation
+      router.push({
+        pathname: '/components/PeoplePage',
+        params: { items: JSON.stringify(items) }
+      });
     } catch (error) {
       console.error('Error analyzing receipt:', error);
       Alert.alert('Error', 'Failed to analyze the receipt. Please try again.');
@@ -116,13 +121,13 @@ export default function UploadBillPage({ navigation }) {
         <TouchableOpacity style={[styles.tabButton, styles.activeTab]}>
           <Text style={[styles.tabText, styles.activeTabText]}>Upload Bill</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.tabButton} onPress={() => navigation.navigate('People')}>
+        <TouchableOpacity style={styles.tabButton} onPress={() => router.push('/components/PeoplePage')}>
           <Text style={styles.tabText}>Add People</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.tabButton} onPress={() => navigation.navigate('Items')}>
+        <TouchableOpacity style={styles.tabButton} onPress={() => router.push('/components/ItemsPage')}>
           <Text style={styles.tabText}>Assign Items</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.tabButton} onPress={() => navigation.navigate('Summary')}>
+        <TouchableOpacity style={styles.tabButton} onPress={() => router.push('/components/SummaryPage')}>
           <Text style={styles.tabText}>Summary</Text>
         </TouchableOpacity>
       </View>

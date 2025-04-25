@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { useRoute } from '@react-navigation/native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 
-export default function ItemsPage({ navigation }) {
-  const route = useRoute();
-  const receivedItems = route.params?.items || [];
-  const people = route.params?.people || [];
-  const paidBy = route.params?.paidBy || null;
+export default function ItemsPage() {
+  const router = useRouter();
+  const params = useLocalSearchParams();
+  
+  // Parse data from params
+  const receivedItems = params.items ? JSON.parse(params.items) : [];
+  const people = params.people ? JSON.parse(params.people) : [];
+  const paidBy = params.paidBy || null;
   
   const [items, setItems] = useState([]);
   const [assignments, setAssignments] = useState({});
@@ -124,16 +127,16 @@ export default function ItemsPage({ navigation }) {
 
       {/* Tabs */}
       <View style={styles.tabsContainer}>
-        <TouchableOpacity style={styles.tabButton} onPress={() => navigation.navigate('Upload')}>
+        <TouchableOpacity style={styles.tabButton} onPress={() => router.push('/')}>
           <Text style={styles.tabText}>Upload Bill</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.tabButton} onPress={() => navigation.navigate('People')}>
+        <TouchableOpacity style={styles.tabButton} onPress={() => router.push('/components/PeoplePage')}>
           <Text style={styles.tabText}>Add People</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.tabButton, styles.activeTab]}>
           <Text style={[styles.tabText, styles.activeTabText]}>Assign Items</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.tabButton} onPress={() => navigation.navigate('Summary')}>
+        <TouchableOpacity style={styles.tabButton} onPress={() => router.push('/components/SummaryPage')}>
           <Text style={styles.tabText}>Summary</Text>
         </TouchableOpacity>
       </View>
@@ -175,7 +178,7 @@ export default function ItemsPage({ navigation }) {
 
       {/* Navigation Buttons */}
       <View style={styles.navigationContainer}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Text style={styles.backButtonText}>← Back</Text>
         </TouchableOpacity>
         <TouchableOpacity 
@@ -183,11 +186,14 @@ export default function ItemsPage({ navigation }) {
           disabled={!isAllItemsAssigned()}
           onPress={() => {
             if (isAllItemsAssigned()) {
-              navigation.navigate('Summary', {
-                items,
-                people,
-                paidBy,
-                assignments
+              router.push({
+                pathname: '/components/SummaryPage',
+                params: {
+                  items: JSON.stringify(items),
+                  people: params.people,
+                  paidBy: paidBy,
+                  assignments: JSON.stringify(assignments)
+                }
               });
             }
           }}

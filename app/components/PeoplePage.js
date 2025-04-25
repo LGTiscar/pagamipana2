@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { useRoute } from '@react-navigation/native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 
-export default function PeoplePage({ navigation }) {
-  const route = useRoute();
+export default function PeoplePage() {
+  const router = useRouter();
+  const params = useLocalSearchParams();
   const [people, setPeople] = useState([]);
   const [personName, setPersonName] = useState('');
   const [paidBy, setPaidBy] = useState(null);
-  const items = route.params?.items || [];
+  
+  // Parse items from route params
+  const items = params.items ? JSON.parse(params.items) : [];
 
   const addPerson = () => {
     if (personName.trim()) {
@@ -70,16 +73,16 @@ export default function PeoplePage({ navigation }) {
 
       {/* Tabs */}
       <View style={styles.tabsContainer}>
-        <TouchableOpacity style={styles.tabButton} onPress={() => navigation.navigate('Upload')}>
+        <TouchableOpacity style={styles.tabButton} onPress={() => router.push('/')}>
           <Text style={styles.tabText}>Upload Bill</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.tabButton, styles.activeTab]}>
           <Text style={[styles.tabText, styles.activeTabText]}>Add People</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.tabButton} onPress={() => navigation.navigate('Items')}>
+        <TouchableOpacity style={styles.tabButton} onPress={() => router.push('/components/ItemsPage')}>
           <Text style={styles.tabText}>Assign Items</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.tabButton} onPress={() => navigation.navigate('Summary')}>
+        <TouchableOpacity style={styles.tabButton} onPress={() => router.push('/components/SummaryPage')}>
           <Text style={styles.tabText}>Summary</Text>
         </TouchableOpacity>
       </View>
@@ -166,7 +169,7 @@ export default function PeoplePage({ navigation }) {
 
       {/* Navigation Buttons */}
       <View style={styles.navigationContainer}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Text style={styles.backButtonText}>← Back</Text>
         </TouchableOpacity>
         <TouchableOpacity 
@@ -174,11 +177,14 @@ export default function PeoplePage({ navigation }) {
           disabled={people.length === 0}
           onPress={() => {
             if (people.length > 0) {
-              // Pass both the people list and received items to the next page
-              navigation.navigate('Items', { 
-                items: items,
-                people: people,
-                paidBy: paidBy
+              // Use router.push instead of navigation.navigate
+              router.push({
+                pathname: '/components/ItemsPage',
+                params: {
+                  items: params.items,
+                  people: JSON.stringify(people),
+                  paidBy
+                }
               });
             }
           }}
