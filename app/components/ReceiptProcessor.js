@@ -1,5 +1,6 @@
 import { Buffer } from 'buffer';
 import axios from 'axios';
+import { GEMINI_API_KEY } from '@env';
 
 class BillItem {
   constructor({ name, price, quantity = 1, unitPrice }) {
@@ -21,7 +22,8 @@ class BillItem {
 
 export default class ReceiptProcessor {
   constructor() {
-    this.apiKey = process.env.GEMINI_API_KEY; // Load API key from environment variable
+    this.apiKey = GEMINI_API_KEY;
+    console.log('API Key loaded:', this.apiKey ? 'Yes (length: ' + this.apiKey.length + ')' : 'No');
   }
 
   async processReceipt(imageBytes) {
@@ -80,6 +82,8 @@ IMPORTANT: Your response must ONLY contain this JSON object and nothing else.
         },
       };
 
+      console.log('Making request to Gemini API...');
+      
       const response = await axios.post(url, payload, {
         headers: {
           'Content-Type': 'application/json',

@@ -5,6 +5,7 @@ import ReceiptProcessor from './ReceiptProcessor';
 
 export default function UploadBillPage({ navigation }) {
   const [uploadedImagePath, setUploadedImagePath] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
   const receiptProcessor = new ReceiptProcessor();
 
   const requestPermissions = async () => {
@@ -79,6 +80,8 @@ export default function UploadBillPage({ navigation }) {
     }
 
     try {
+      setIsProcessing(true);
+      
       // Fetch the image as bytes
       const response = await fetch(uploadedImagePath);
       const imageBytes = await response.arrayBuffer();
@@ -87,10 +90,13 @@ export default function UploadBillPage({ navigation }) {
       const items = await receiptProcessor.processReceipt(imageBytes);
 
       console.log('Analyzed Items:', items);
-      Alert.alert('Analysis Complete', 'The receipt has been successfully analyzed. Check the console for details.');
+      
+      // Automatically navigate to the next page with the items data
+      navigation.navigate('People', { items });
     } catch (error) {
       console.error('Error analyzing receipt:', error);
       Alert.alert('Error', 'Failed to analyze the receipt. Please try again.');
+      setIsProcessing(false);
     }
   };
 
@@ -135,8 +141,14 @@ export default function UploadBillPage({ navigation }) {
 
         {/* Navigation Buttons */}
         <View style={styles.analyzeButtonContainer}>
-          <TouchableOpacity style={styles.analyzeButton} onPress={analyzeReceipt}>
-            <Text style={styles.analyzeButtonText}>Analyze</Text>
+          <TouchableOpacity 
+            style={[styles.analyzeButton, isProcessing && styles.disabledButton]} 
+            onPress={analyzeReceipt}
+            disabled={isProcessing}
+          >
+            <Text style={styles.analyzeButtonText}>
+              {isProcessing ? 'Processing...' : 'Analyze'}
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -245,5 +257,9 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '500',
     fontSize: 14,
+  },
+  disabledButton: {
+    backgroundColor: '#A5D6A7',
+    opacity: 0.7,
   },
 });
