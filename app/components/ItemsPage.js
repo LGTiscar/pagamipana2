@@ -226,11 +226,7 @@ export default function ItemsPage() {
                 </View>
               </View>
             ) : (
-              <Text style={styles.itemQuantity}>Qty: {itemQuantity}</Text>
-            )}
-            
-            {!showQuantityControls && (
-              <Text style={styles.itemUnitPrice}>@ ${item.unitPrice?.toFixed(2) || '0.00'}</Text>
+              <Text style={styles.itemQuantity}>Qty: {itemQuantity} @ ${item.unitPrice?.toFixed(2) || '0.00'}</Text>
             )}
           </View>
           
@@ -264,11 +260,14 @@ export default function ItemsPage() {
               
               return (
                 <View key={person.id} style={styles.personQuantityContainer}>
-                  {/* New integrated bubble layout */}
-                  <View style={[
-                    styles.personBubble,
-                    isAssigned ? { borderColor: person.color } : styles.unassignedBubble
-                  ]}>
+                  {/* Make the whole bubble clickable for both quantity=1 and quantity>1 cases */}
+                  <TouchableOpacity 
+                    onPress={() => togglePersonForItem(index, person.id)}
+                    style={[
+                      styles.personBubble,
+                      isAssigned ? { borderColor: person.color } : styles.unassignedBubble
+                    ]}
+                  >
                     {/* Avatar with initial */}
                     <View style={[
                       styles.miniAvatar, 
@@ -277,11 +276,14 @@ export default function ItemsPage() {
                       <Text style={styles.miniAvatarText}>{person.initial}</Text>
                     </View>
                     
-                    {/* Minus Button */}
+                    {/* Minus Button - only for quantity > 1 */}
                     {showQuantityControls && (
                       <TouchableOpacity 
                         style={styles.inlineMinus}
-                        onPress={() => decreaseQuantity(index, person.id)}
+                        onPress={(e) => {
+                          e.stopPropagation(); // Prevent parent touchable from firing
+                          decreaseQuantity(index, person.id);
+                        }}
                       >
                         <Text style={styles.inlineButtonText}>−</Text>
                       </TouchableOpacity>
@@ -292,21 +294,24 @@ export default function ItemsPage() {
                       {person.name}
                     </Text>
                     
-                    {/* Quantity Value */}
+                    {/* Quantity Value - only for quantity > 1 */}
                     {showQuantityControls && (
                       <Text style={styles.inlineQuantity}>{personQuantity}</Text>
                     )}
                     
-                    {/* Plus Button */}
+                    {/* Plus Button - only for quantity > 1 */}
                     {showQuantityControls && (
                       <TouchableOpacity 
                         style={styles.inlinePlus}
-                        onPress={() => increaseQuantity(index, person.id)}
+                        onPress={(e) => {
+                          e.stopPropagation(); // Prevent parent touchable from firing
+                          increaseQuantity(index, person.id);
+                        }}
                       >
                         <Text style={styles.inlineButtonText}>+</Text>
                       </TouchableOpacity>
                     )}
-                  </View>
+                  </TouchableOpacity>
                 </View>
               );
             })}
