@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, ScrollView, Switch } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, ScrollView, Switch, Alert } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 
 export default function ItemsPage() {
@@ -121,12 +121,59 @@ export default function ItemsPage() {
     });
   };
 
-  // Simple toggle function without any special behavior for now
+  // Toggle shared status and reset counters when switching from ON to OFF
   const toggleSharedItem = (itemIndex) => {
-    setSharedItems(prev => ({
-      ...prev,
-      [itemIndex]: !prev[itemIndex]
-    }));
+    setSharedItems(prev => {
+      const newSharedStatus = !prev[itemIndex];
+      
+      // If turning shared OFF, we need to reset counters
+      if (!newSharedStatus) { // switching from ON to OFF
+        const item = items[itemIndex];
+        const itemQuantity = item.quantity || 1;
+        const currentAssignedQuantity = calculateTotalAssignedQuantity(itemIndex);
+        
+        // If the assigned quantity exceeds what's allowed in non-shared mode
+        if (currentAssignedQuantity > itemQuantity) {
+          // Reset all counters for this item to zero
+          setPersonItemQuantities(prevQuantities => {
+            const newQuantities = { ...prevQuantities };
+            
+            // Get assigned people for this item
+            const assignedPeople = assignments[itemIndex] || [];
+            
+            // Reset all counters to 0
+            if (assignedPeople.length > 0) {
+              // Create a new object for this item's quantities
+              newQuantities[itemIndex] = {};
+              
+              // Set all assigned people's quantities to 0
+              assignedPeople.forEach(personId => {
+                newQuantities[itemIndex][personId] = 0;
+              });
+            }
+            
+            return newQuantities;
+          });
+          
+          // Also reset assignments since all counters are now 0
+          setAssignments(prev => {
+            return {
+              ...prev,
+              [itemIndex]: []
+            };
+          });
+          
+          // Show an alert explaining what happened
+          Alert.alert(
+            "Counters Reset",
+            "Shared mode turned off. All counters have been reset to 0.",
+            [{ text: "OK" }]
+          );
+        }
+      }
+      
+      return { ...prev, [itemIndex]: newSharedStatus };
+    });
   };
 
   const getPersonById = (id) => {
@@ -152,8 +199,48 @@ export default function ItemsPage() {
     );
   };
 
+  // Helper function to calculate the sum of quantities for an item
+  const calculateTotalAssignedQuantity = (itemIndex) => {
+    if (!personItemQuantities[itemIndex]) return 0;
+    
+    return Object.values(personItemQuantities[itemIndex]).reduce(
+      (sum, qty) => sum + qty, 
+      0
+    );
+  };
+  
   // Function to increase the quantity for a person-item pair
   const increaseQuantity = (itemIndex, personId) => {
+    const item = items[itemIndex];
+    const itemQuantity = item.quantity || 1;
+    const currentAssignedQuantity = calculateTotalAssignedQuantity(itemIndex);
+    const currentPersonQuantity = personItemQuantities[itemIndex]?.[personId] || 0;
+    
+    // Different behavior based on shared switch status
+    if (sharedItems[itemIndex]) {
+      // SHARED is ON: Each person can have up to item's total quantity
+      if (currentPersonQuantity >= itemQuantity) {
+        // Show alert that maximum quantity per person is reached
+        Alert.alert(
+          "Maximum Quantity Reached",
+          `You cannot assign more than ${itemQuantity} portions of this item per person when shared.`,
+          [{ text: "OK" }]
+        );
+        return;
+      }
+    } else {
+      // SHARED is OFF: Total assigned cannot exceed item quantity
+      if (currentAssignedQuantity >= itemQuantity) {
+        // Show alert that maximum quantity is reached
+        Alert.alert(
+          "Maximum Quantity Reached",
+          `You cannot assign more than ${itemQuantity} portions for this item.`,
+          [{ text: "OK" }]
+        );
+        return;
+      }
+    }
+    
     setPersonItemQuantities(prev => {
       const newQuantities = { ...prev };
       if (!newQuantities[itemIndex]) {
@@ -200,6 +287,8 @@ export default function ItemsPage() {
   const renderItem = ({ item, index }) => {
     const itemQuantity = item.quantity || 1;
     const showQuantityControls = itemQuantity > 1;
+    const currentTotalAssigned = calculateTotalAssignedQuantity(index);
+    const remainingQuantity = itemQuantity - currentTotalAssigned;
     
     return (
       <View style={styles.itemCard}>
@@ -246,6 +335,18 @@ export default function ItemsPage() {
         {showQuantityControls && (
           <View style={styles.unitPriceContainer}>
             <Text style={styles.itemUnitPrice}>@ ${item.unitPrice?.toFixed(2) || '0.00'} each</Text>
+          </View>
+        )}
+        
+        {/* Display remaining quantity if it's a multi-quantity item and not shared */}
+        {showQuantityControls && !sharedItems[index] && (
+          <View style={styles.remainingContainer}>
+            <Text style={[
+              styles.remainingText,
+              remainingQuantity === 0 ? styles.remainingZero : null
+            ]}>
+              {remainingQuantity} {remainingQuantity === 1 ? 'portion' : 'portions'} remaining to assign
+            </Text>
           </View>
         )}
 
@@ -302,13 +403,29 @@ export default function ItemsPage() {
                     {/* Plus Button - only for quantity > 1 */}
                     {showQuantityControls && (
                       <TouchableOpacity 
-                        style={styles.inlinePlus}
+                        style={[
+                          styles.inlinePlus,
+                          // Different visual state based on shared status
+                          (sharedItems[index]) 
+                            // For shared items: disable only if this person has reached max quantity
+                            ? (personItemQuantities[index]?.[person.id] >= itemQuantity ? styles.disabledButton : {})
+                            // For non-shared items: disable if no remaining quantity and person has none
+                            : (remainingQuantity <= 0 && personQuantity === 0) ? styles.disabledButton : {}
+                        ]}
                         onPress={(e) => {
                           e.stopPropagation(); // Prevent parent touchable from firing
                           increaseQuantity(index, person.id);
                         }}
                       >
-                        <Text style={styles.inlineButtonText}>+</Text>
+                        <Text style={[
+                          styles.inlineButtonText,
+                          // Different visual state based on shared status
+                          (sharedItems[index]) 
+                            // For shared items: disable text only if this person has reached max quantity
+                            ? (personItemQuantities[index]?.[person.id] >= itemQuantity ? styles.disabledButtonText : {})
+                            // For non-shared items: disable if no remaining quantity and person has none
+                            : (remainingQuantity <= 0 && personQuantity === 0) ? styles.disabledButtonText : {}
+                        ]}>+</Text>
                       </TouchableOpacity>
                     )}
                   </TouchableOpacity>
@@ -773,5 +890,15 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     width: 18,
     textAlign: 'center',
+  },
+  remainingContainer: {
+    marginTop: 8,
+  },
+  remainingText: {
+    fontSize: 14,
+    color: '#757575',
+  },
+  remainingZero: {
+    color: '#D32F2F',
   },
 });
