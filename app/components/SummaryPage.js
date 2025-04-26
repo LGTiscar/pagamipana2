@@ -11,6 +11,8 @@ export default function SummaryPage() {
   const people = params.people ? JSON.parse(params.people) : [];
   const paidBy = params.paidBy || null;
   const assignments = params.assignments ? JSON.parse(params.assignments) : {};
+  const personItemQuantities = params.personItemQuantities ? JSON.parse(params.personItemQuantities) : {};
+  const sharedItems = params.sharedItems ? JSON.parse(params.sharedItems) : {};
 
   const calculateTotal = () => {
     let total = 0;
@@ -53,11 +55,18 @@ export default function SummaryPage() {
             owes[personId] = (owes[personId] || 0) + pricePerPerson;
           });
         } else {
-          // For items with quantities > 1, we'll implement this in the next step
-          // For now, default to equal splitting as well
-          const pricePerPerson = totalPrice / assignedPeople.length;
+          // For items with quantities > 1 and Shared switch OFF
+          // Each person pays for what they consumed
+          const unitPrice = item.unitPrice || 0;
+          
           assignedPeople.forEach(personId => {
-            owes[personId] = (owes[personId] || 0) + pricePerPerson;
+            // Get the quantity this person consumed
+            const personQuantity = personItemQuantities[itemIndex]?.[personId] || 0;
+            if (personQuantity > 0) {
+              // Calculate what this person owes based on their consumption
+              const personCost = unitPrice * personQuantity;
+              owes[personId] = (owes[personId] || 0) + personCost;
+            }
           });
         }
       }

@@ -512,7 +512,9 @@ export default function ItemsPage() {
                   items: JSON.stringify(items),
                   people: JSON.stringify(people),
                   paidBy: paidBy,
-                  assignments: JSON.stringify(assignments)
+                  assignments: JSON.stringify(assignments),
+                  personItemQuantities: JSON.stringify(personItemQuantities),
+                  sharedItems: JSON.stringify(sharedItems)
                 }
               });
             }
