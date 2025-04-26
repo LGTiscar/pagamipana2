@@ -46,10 +46,20 @@ export default function SummaryPage() {
       const assignedPeople = assignments[itemIndex] || [];
       
       if (assignedPeople.length > 0) {
-        const pricePerPerson = totalPrice / assignedPeople.length;
-        assignedPeople.forEach(personId => {
-          owes[personId] = (owes[personId] || 0) + pricePerPerson;
-        });
+        // For quantity = 1, split equally among assigned people
+        if (item.quantity === 1 || !item.quantity) {
+          const pricePerPerson = totalPrice / assignedPeople.length;
+          assignedPeople.forEach(personId => {
+            owes[personId] = (owes[personId] || 0) + pricePerPerson;
+          });
+        } else {
+          // For items with quantities > 1, we'll implement this in the next step
+          // For now, default to equal splitting as well
+          const pricePerPerson = totalPrice / assignedPeople.length;
+          assignedPeople.forEach(personId => {
+            owes[personId] = (owes[personId] || 0) + pricePerPerson;
+          });
+        }
       }
     });
 
