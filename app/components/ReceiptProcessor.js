@@ -1,9 +1,5 @@
 import { Buffer } from 'buffer';
 import axios from 'axios';
-// Remove the old import
-// import { GEMINI_API_KEY } from '@env';
-// Add the correct import for Expo environment variables
-import Constants from 'expo-constants';
 
 class BillItem {
   constructor({ name, price, quantity = 1, unitPrice }) {
@@ -25,20 +21,19 @@ class BillItem {
 
 export default class ReceiptProcessor {
   constructor() {
-    // Access the API key from Expo's Constants
-    this.apiKey = Constants.expoConfig?.extra?.apiKey;
-    // Add a log to check if the key was loaded
-    console.log('API Key loaded via Constants:', this.apiKey ? `Yes (length: ${this.apiKey.length})` : 'No/Undefined');
-    if (!this.apiKey) {
-      console.warn("API Key not found in Constants.expoConfig.extra.apiKey. Check your .env file and app.json configuration.");
+    // Access the API key directly from process.env
+    this.apiKey = process.env.EXPO_PUBLIC_API_KEY;
+    // Updated logging
+    console.log('API Key loaded via process.env.EXPO_PUBLIC_API_KEY:', this.apiKey ? `Yes (length: ${this.apiKey.length})` : 'No/Undefined');
+    if (!this.apiKey || typeof this.apiKey !== 'string') {
+      console.warn("API Key not found or not a string in process.env.EXPO_PUBLIC_API_KEY. Check your .env file (must start with EXPO_PUBLIC_).");
     }
   }
 
   async processReceipt(imageBytes) {
-    // Add a check at the beginning of the function
-    if (!this.apiKey) {
-      console.error("Cannot process receipt: API Key is missing.");
-      throw new Error("API Key is not configured. Please check setup.");
+    if (!this.apiKey || typeof this.apiKey !== 'string') {
+      console.error("Cannot process receipt: API Key is missing or invalid.");
+      throw new Error("API Key is not configured correctly. Please check setup.");
     }
     try {
       // Convert image to base64
