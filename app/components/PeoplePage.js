@@ -1,18 +1,35 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useAppContext } from '../context/AppContext';
 
 export default function PeoplePage() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const [people, setPeople] = useState([]);
-  const [personName, setPersonName] = useState('');
-  const [paidBy, setPaidBy] = useState(null);
   
-  // Parse items from route params
-  const items = params.items ? JSON.parse(params.items) : [];
-
+  // Use global context instead of local state
+  const { 
+    people, setPeople, 
+    paidBy, setPaidBy,
+    items, setItems 
+  } = useAppContext();
+  
+  const [personName, setPersonName] = React.useState('');
+  
+  // Parse items from params only once when the component mounts and if context is empty
+  React.useEffect(() => {
+    // Only parse and update items if context is empty but we have params
+    if (items.length === 0 && params.items) {
+      try {
+        const parsedItems = JSON.parse(params.items);
+        setItems(parsedItems);
+      } catch (error) {
+        console.error('Error parsing items from params:', error);
+      }
+    }
+  }, []);
+  
   const addPerson = () => {
     if (personName.trim()) {
       // Generate a random color
@@ -179,15 +196,7 @@ export default function PeoplePage() {
             disabled={people.length === 0}
             onPress={() => {
               if (people.length > 0) {
-                // Use router.push instead of navigation.navigate
-                router.push({
-                  pathname: '/components/ItemsPage',
-                  params: {
-                    items: params.items,
-                    people: JSON.stringify(people),
-                    paidBy
-                  }
-                });
+                router.push('/components/ItemsPage');
               }
             }}
           >

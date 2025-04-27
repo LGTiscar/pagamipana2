@@ -1,105 +1,24 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, ScrollView, Switch, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter } from 'expo-router';
+import { useAppContext } from '../context/AppContext';
 
 export default function ItemsPage() {
   const router = useRouter();
-  const params = useLocalSearchParams();
   
-  const [items, setItems] = useState([]);
-  const [people, setPeople] = useState([]);
-  const [paidBy, setPaidBy] = useState(null);
-  const [assignments, setAssignments] = useState({});
-  const [sharedItems, setSharedItems] = useState({});
-  const [personItemQuantities, setPersonItemQuantities] = useState({});
-
-  // Parse params safely using useEffect to prevent render loops
-  useEffect(() => {
-    try {
-      // Only parse and update if we have data and it's different
-      if (params.items) {
-        const parsedItems = JSON.parse(params.items);
-        setItems(parsedItems);
-      }
-      
-      if (params.people) {
-        const parsedPeople = JSON.parse(params.people);
-        setPeople(parsedPeople);
-      }
-      
-      if (params.paidBy) {
-        setPaidBy(params.paidBy);
-      }
-    } catch (error) {
-      console.error('Error parsing params:', error);
-    }
-  }, [params.items, params.people, params.paidBy]);
+  // Use global context instead of local state
+  const { 
+    items, setItems,
+    people, setPeople,
+    paidBy, setPaidBy,
+    assignments, setAssignments,
+    sharedItems, setSharedItems,
+    personItemQuantities, setPersonItemQuantities
+  } = useAppContext();
   
-  // Initialize assignments separately after items are loaded
-  useEffect(() => {
-    if (items.length > 0) {
-      // Only initialize assignments if they don't exist yet
-      const initialAssignments = {};
-      const initialSharedItems = {};
-      
-      items.forEach((item, index) => {
-        if (!assignments[index]) {
-          initialAssignments[index] = [];
-        }
-        if (sharedItems[index] === undefined) {
-          initialSharedItems[index] = false; // Default shared status is OFF
-        }
-      });
-      
-      // Only update if there are new assignments to add
-      if (Object.keys(initialAssignments).length > 0) {
-        setAssignments(prev => ({...prev, ...initialAssignments}));
-      }
-      
-      // Only update if there are new shared statuses to add
-      if (Object.keys(initialSharedItems).length > 0) {
-        setSharedItems(prev => ({...prev, ...initialSharedItems}));
-      }
-    }
-  }, [items]);
-
-  // Initialize person-item quantities when items or people change
-  useEffect(() => {
-    if (items.length > 0 && people.length > 0) {
-      const initialQuantities = {};
-      
-      // For each item
-      items.forEach((item, itemIndex) => {
-        initialQuantities[itemIndex] = {};
-        
-        // For each person, initialize quantity to 0
-        people.forEach(person => {
-          initialQuantities[itemIndex][person.id] = 0;
-        });
-      });
-      
-      // Only set if we don't already have values
-      setPersonItemQuantities(prev => {
-        const newQuantities = { ...prev };
-        
-        // Merge only missing values
-        Object.keys(initialQuantities).forEach(itemIndex => {
-          if (!newQuantities[itemIndex]) {
-            newQuantities[itemIndex] = {};
-          }
-          
-          Object.keys(initialQuantities[itemIndex]).forEach(personId => {
-            if (newQuantities[itemIndex][personId] === undefined) {
-              newQuantities[itemIndex][personId] = initialQuantities[itemIndex][personId];
-            }
-          });
-        });
-        
-        return newQuantities;
-      });
-    }
-  }, [items, people]);
+  // No need for useEffect to parse params as we're now using global context
+  // All data is already available in context from previous pages
 
   const togglePersonForItem = (itemIndex, personId) => {
     const item = items[itemIndex];
@@ -613,17 +532,7 @@ export default function ItemsPage() {
             disabled={!isAllItemsAssigned()}
             onPress={() => {
               if (isAllItemsAssigned()) {
-                router.push({
-                  pathname: '/components/SummaryPage',
-                  params: {
-                    items: JSON.stringify(items),
-                    people: JSON.stringify(people),
-                    paidBy: paidBy,
-                    assignments: JSON.stringify(assignments),
-                    personItemQuantities: JSON.stringify(personItemQuantities),
-                    sharedItems: JSON.stringify(sharedItems)
-                  }
-                });
+                router.push('/components/SummaryPage');
               }
             }}
           >

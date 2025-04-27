@@ -1,20 +1,21 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-// Import SafeAreaView
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter } from 'expo-router';
+import { useAppContext } from '../context/AppContext';
 
 export default function SummaryPage() {
   const router = useRouter();
-  const params = useLocalSearchParams();
   
-  // Parse data from params
-  const items = params.items ? JSON.parse(params.items) : [];
-  const people = params.people ? JSON.parse(params.people) : [];
-  const paidBy = params.paidBy || null;
-  const assignments = params.assignments ? JSON.parse(params.assignments) : {};
-  const personItemQuantities = params.personItemQuantities ? JSON.parse(params.personItemQuantities) : {};
-  const sharedItems = params.sharedItems ? JSON.parse(params.sharedItems) : {};
+  // Use global context instead of local state
+  const { 
+    items, 
+    people,
+    paidBy,
+    assignments,
+    personItemQuantities,
+    sharedItems
+  } = useAppContext();
 
   const calculateTotal = () => {
     let total = 0;
@@ -143,7 +144,6 @@ export default function SummaryPage() {
   };
 
   return (
-    // Wrap the entire content in SafeAreaView
     <SafeAreaView style={styles.safeArea}>
       <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
         {/* Progress Bar */}

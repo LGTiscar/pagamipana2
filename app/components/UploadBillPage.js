@@ -1,16 +1,21 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'react-native';
-// Import SafeAreaView
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import ReceiptProcessor from './ReceiptProcessor';
 import { useRouter } from 'expo-router';
+import { useAppContext } from '../context/AppContext';
 
 export default function UploadBillPage() {
   const router = useRouter();
-  const [uploadedImagePath, setUploadedImagePath] = useState(null);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [isProcessing, setIsProcessing] = React.useState(false);
   const receiptProcessor = new ReceiptProcessor();
+  
+  // Use global context
+  const { 
+    items, setItems,
+    uploadedImagePath, setUploadedImagePath 
+  } = useAppContext();
 
   const requestPermissions = async () => {
     const { status: libraryStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -91,18 +96,18 @@ export default function UploadBillPage() {
       const imageBytes = await response.arrayBuffer();
 
       // Process the receipt
-      const items = await receiptProcessor.processReceipt(imageBytes);
+      const parsedItems = await receiptProcessor.processReceipt(imageBytes);
 
-      console.log('Analyzed Items:', items);
+      console.log('Analyzed Items:', parsedItems);
+      
+      // Update items in context
+      setItems(parsedItems);
       
       // Reset processing state before navigation
       setIsProcessing(false);
       
-      // Use router instead of navigation
-      router.push({
-        pathname: '/components/PeoplePage',
-        params: { items: JSON.stringify(items) }
-      });
+      // Navigate to PeoplePage without needing to pass items as params
+      router.push('/components/PeoplePage');
     } catch (error) {
       console.error('Error analyzing receipt:', error);
       Alert.alert('Error', 'Failed to analyze the receipt. Please try again.');
