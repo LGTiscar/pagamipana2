@@ -1,5 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+// Import SafeAreaView
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 
 export default function SummaryPage() {
@@ -141,63 +143,71 @@ export default function SummaryPage() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      {/* Progress Bar */}
-      <View style={styles.progressBarContainer}>
-        <View style={[styles.progressBar, { width: '100%' }]} />
-      </View>
+    // Wrap the entire content in SafeAreaView
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+        {/* Progress Bar */}
+        <View style={styles.progressBarContainer}>
+          <View style={[styles.progressBar, { width: '100%' }]} />
+        </View>
 
-      {/* Tabs */}
-      <View style={styles.tabsContainer}>
-        <TouchableOpacity style={styles.tabButton} onPress={() => router.push('/')}>
-          <Text style={styles.tabText}>Upload Bill</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.tabButton} onPress={() => router.push('/components/PeoplePage')}>
-          <Text style={styles.tabText}>Add People</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.tabButton} onPress={() => router.push('/components/ItemsPage')}>
-          <Text style={styles.tabText}>Assign Items</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.tabButton, styles.activeTab]}>
-          <Text style={[styles.tabText, styles.activeTabText]}>Summary</Text>
-        </TouchableOpacity>
-      </View>
+        {/* Tabs */}
+        <View style={styles.tabsContainer}>
+          <TouchableOpacity style={styles.tabButton} onPress={() => router.push('/')}>
+            <Text style={styles.tabText}>Upload Bill</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.tabButton} onPress={() => router.push('/components/PeoplePage')}>
+            <Text style={styles.tabText}>Add People</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.tabButton} onPress={() => router.push('/components/ItemsPage')}>
+            <Text style={styles.tabText}>Assign Items</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.tabButton, styles.activeTab]}>
+            <Text style={[styles.tabText, styles.activeTabText]}>Summary</Text>
+          </TouchableOpacity>
+        </View>
 
-      {/* Title and Subtitle */}
-      <Text style={styles.title}>Step 4: Summary</Text>
-      <Text style={styles.subtitle}>See who owes what to whom</Text>
+        {/* Title and Subtitle */}
+        <Text style={styles.title}>Step 4: Summary</Text>
+        <Text style={styles.subtitle}>See who owes what to whom</Text>
 
-      {renderSummary()}
+        {renderSummary()}
 
-      {/* Instructions Box */}
-      <View style={styles.instructionsBox}>
-        <Text style={styles.instructionsTitle}>All done!</Text>
-        <Text style={styles.instructionsText}>
-          Everyone can now settle up with the person who paid the bill.
-        </Text>
-      </View>
+        {/* Instructions Box */}
+        <View style={styles.instructionsBox}>
+          <Text style={styles.instructionsTitle}>All done!</Text>
+          <Text style={styles.instructionsText}>
+            Everyone can now settle up with the person who paid the bill.
+          </Text>
+        </View>
 
-      {/* Navigation Buttons */}
-      <View style={styles.navigationContainer}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Text style={styles.backButtonText}>← Back</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.doneButton} onPress={() => router.push('/')}>
-          <Text style={styles.doneButtonText}>Done</Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+        {/* Navigation Buttons */}
+        <View style={styles.navigationContainer}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <Text style={styles.backButtonText}>← Back</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.doneButton} onPress={() => router.push('/')}>
+            <Text style={styles.doneButtonText}>Done</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  // Add style for SafeAreaView
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#E8F5E9', // Match the container background
+  },
   container: {
     flex: 1,
-    backgroundColor: '#E8F5E9',
+    // backgroundColor is now handled by SafeAreaView
   },
   contentContainer: {
     padding: 20,
-    paddingBottom: 40,
+    paddingBottom: 40, // Keep bottom padding for scroll content
   },
   progressBarContainer: {
     width: '100%',

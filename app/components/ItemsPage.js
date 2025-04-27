@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, ScrollView, Switch, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 
 export default function ItemsPage() {
@@ -439,102 +440,108 @@ export default function ItemsPage() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      {/* Progress Bar */}
-      <View style={styles.progressBarContainer}>
-        <View style={[styles.progressBar, { width: '75%' }]} />
-      </View>
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+        {/* Progress Bar */}
+        <View style={styles.progressBarContainer}>
+          <View style={[styles.progressBar, { width: '75%' }]} />
+        </View>
 
-      {/* Tabs */}
-      <View style={styles.tabsContainer}>
-        <TouchableOpacity style={styles.tabButton} onPress={() => router.push('/')}>
-          <Text style={styles.tabText}>Upload Bill</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.tabButton} onPress={() => router.push('/components/PeoplePage')}>
-          <Text style={styles.tabText}>Add People</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.tabButton, styles.activeTab]}>
-          <Text style={[styles.tabText, styles.activeTabText]}>Assign Items</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.tabButton} onPress={() => router.push('/components/SummaryPage')}>
-          <Text style={styles.tabText}>Summary</Text>
-        </TouchableOpacity>
-      </View>
+        {/* Tabs */}
+        <View style={styles.tabsContainer}>
+          <TouchableOpacity style={styles.tabButton} onPress={() => router.push('/')}>
+            <Text style={styles.tabText}>Upload Bill</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.tabButton} onPress={() => router.push('/components/PeoplePage')}>
+            <Text style={styles.tabText}>Add People</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.tabButton, styles.activeTab]}>
+            <Text style={[styles.tabText, styles.activeTabText]}>Assign Items</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.tabButton} onPress={() => router.push('/components/SummaryPage')}>
+            <Text style={styles.tabText}>Summary</Text>
+          </TouchableOpacity>
+        </View>
 
-      {/* Title and Subtitle */}
-      <Text style={styles.title}>Step 3: Assign Items</Text>
-      <Text style={styles.subtitle}>Select who ordered each item</Text>
+        {/* Title and Subtitle */}
+        <Text style={styles.title}>Step 3: Assign Items</Text>
+        <Text style={styles.subtitle}>Select who ordered each item</Text>
 
-      {/* Bill Total */}
-      <View style={styles.totalContainer}>
-        <Text style={styles.totalLabel}>Bill Total:</Text>
-        <Text style={styles.totalAmount}>${calculateTotal()}</Text>
-      </View>
+        {/* Bill Total */}
+        <View style={styles.totalContainer}>
+          <Text style={styles.totalLabel}>Bill Total:</Text>
+          <Text style={styles.totalAmount}>${calculateTotal()}</Text>
+        </View>
 
-      {/* Bill Items */}
-      {items.length > 0 ? (
-        <FlatList
-          data={items}
-          renderItem={renderItem}
-          keyExtractor={(item, index) => index.toString()}
-          style={styles.itemsList}
-          scrollEnabled={false}
-        />
-      ) : (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyStateText}>
-            No items found. Please go back to upload a bill.
+        {/* Bill Items */}
+        {items.length > 0 ? (
+          <FlatList
+            data={items}
+            renderItem={renderItem}
+            keyExtractor={(item, index) => index.toString()}
+            style={styles.itemsList}
+            scrollEnabled={false}
+          />
+        ) : (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyStateText}>
+              No items found. Please go back to upload a bill.
+            </Text>
+          </View>
+        )}
+
+        {/* Instructions Box */}
+        <View style={styles.instructionsBox}>
+          <Text style={styles.instructionsTitle}>Next step:</Text>
+          <Text style={styles.instructionsText}>
+            After assigning all items, you'll see the summary of what each person owes.
           </Text>
         </View>
-      )}
 
-      {/* Instructions Box */}
-      <View style={styles.instructionsBox}>
-        <Text style={styles.instructionsTitle}>Next step:</Text>
-        <Text style={styles.instructionsText}>
-          After assigning all items, you'll see the summary of what each person owes.
-        </Text>
-      </View>
-
-      {/* Navigation Buttons */}
-      <View style={styles.navigationContainer}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Text style={styles.backButtonText}>← Back</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.nextButton, !isAllItemsAssigned() && styles.disabledButton]} 
-          disabled={!isAllItemsAssigned()}
-          onPress={() => {
-            if (isAllItemsAssigned()) {
-              router.push({
-                pathname: '/components/SummaryPage',
-                params: {
-                  items: JSON.stringify(items),
-                  people: JSON.stringify(people),
-                  paidBy: paidBy,
-                  assignments: JSON.stringify(assignments),
-                  personItemQuantities: JSON.stringify(personItemQuantities),
-                  sharedItems: JSON.stringify(sharedItems)
-                }
-              });
-            }
-          }}
-        >
-          <Text style={styles.nextButtonText}>Next →</Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+        {/* Navigation Buttons */}
+        <View style={styles.navigationContainer}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <Text style={styles.backButtonText}>← Back</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.nextButton, !isAllItemsAssigned() && styles.disabledButton]} 
+            disabled={!isAllItemsAssigned()}
+            onPress={() => {
+              if (isAllItemsAssigned()) {
+                router.push({
+                  pathname: '/components/SummaryPage',
+                  params: {
+                    items: JSON.stringify(items),
+                    people: JSON.stringify(people),
+                    paidBy: paidBy,
+                    assignments: JSON.stringify(assignments),
+                    personItemQuantities: JSON.stringify(personItemQuantities),
+                    sharedItems: JSON.stringify(sharedItems)
+                  }
+                });
+              }
+            }}
+          >
+            <Text style={styles.nextButtonText}>Next →</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#E8F5E9', // Match the container background
+  },
   container: {
     flex: 1,
-    backgroundColor: '#E8F5E9',
+    // backgroundColor is now handled by SafeAreaView
   },
   contentContainer: {
     padding: 20,
-    paddingBottom: 40,
+    paddingBottom: 40, // Keep bottom padding for scroll content
   },
   progressBarContainer: {
     width: '100%',

@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'react-native';
+// Import SafeAreaView
+import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import ReceiptProcessor from './ReceiptProcessor';
 import { useRouter } from 'expo-router';
@@ -110,113 +112,121 @@ export default function UploadBillPage() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      {/* Progress Bar */}
-      <View style={styles.progressBarContainer}>
-        <View style={[styles.progressBar, { width: '25%' }]} />
-      </View>
+    // Wrap the entire content in SafeAreaView
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+        {/* Progress Bar */}
+        <View style={styles.progressBarContainer}>
+          <View style={[styles.progressBar, { width: '25%' }]} />
+        </View>
 
-      {/* Tabs */}
-      <View style={styles.tabsContainer}>
-        <TouchableOpacity style={[styles.tabButton, styles.activeTab]}>
-          <Text style={[styles.tabText, styles.activeTabText]}>Upload Bill</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.tabButton} onPress={() => router.push('/components/PeoplePage')}>
-          <Text style={styles.tabText}>Add People</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.tabButton} onPress={() => router.push('/components/ItemsPage')}>
-          <Text style={styles.tabText}>Assign Items</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.tabButton} onPress={() => router.push('/components/SummaryPage')}>
-          <Text style={styles.tabText}>Summary</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Title */}
-      <Text style={styles.title}>Step 1: Upload Your Bill</Text>
-      <Text style={styles.subtitle}>Upload an image of your restaurant bill</Text>
-
-      {/* Image Upload Cards */}
-      <View style={styles.uploadCardContainer}>
-        <TouchableOpacity style={styles.uploadCard} onPress={pickImage}>
-          <View style={styles.uploadIconContainer}>
-            <Text style={styles.uploadIcon}>🖼️</Text>
-          </View>
-          <Text style={styles.uploadCardTitle}>Gallery</Text>
-          <Text style={styles.uploadCardSubtitle}>Select from your photos</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.uploadCard} onPress={takePhoto}>
-          <View style={styles.uploadIconContainer}>
-            <Text style={styles.uploadIcon}>📷</Text>
-          </View>
-          <Text style={styles.uploadCardTitle}>Camera</Text>
-          <Text style={styles.uploadCardSubtitle}>Take a photo now</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Image Preview */}
-      {uploadedImagePath ? (
-        <View style={styles.previewContainer}>
-          <View style={styles.previewHeader}>
-            <Text style={styles.previewTitle}>Bill Preview</Text>
-            <TouchableOpacity onPress={() => setUploadedImagePath(null)}>
-              <Text style={styles.removeButton}>✕</Text>
-            </TouchableOpacity>
-          </View>
-          <Image source={{ uri: uploadedImagePath }} style={styles.imagePreview} />
-          
-          {/* Analyze Button */}
-          <TouchableOpacity 
-            style={[styles.analyzeButton, isProcessing && styles.disabledButton]} 
-            onPress={analyzeReceipt}
-            disabled={isProcessing}
-          >
-            <Text style={styles.analyzeButtonText}>
-              {isProcessing ? 'Processing...' : 'Analyze Receipt'}
-            </Text>
+        {/* Tabs */}
+        <View style={styles.tabsContainer}>
+          <TouchableOpacity style={[styles.tabButton, styles.activeTab]}>
+            <Text style={[styles.tabText, styles.activeTabText]}>Upload Bill</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.tabButton} onPress={() => router.push('/components/PeoplePage')}>
+            <Text style={styles.tabText}>Add People</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.tabButton} onPress={() => router.push('/components/ItemsPage')}>
+            <Text style={styles.tabText}>Assign Items</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.tabButton} onPress={() => router.push('/components/SummaryPage')}>
+            <Text style={styles.tabText}>Summary</Text>
           </TouchableOpacity>
         </View>
-      ) : (
-        <View style={styles.noImageContainer}>
-          <Text style={styles.noImageText}>Your bill preview will appear here</Text>
-        </View>
-      )}
 
-      {/* OCR Tips */}
-      <View style={styles.instructionsBox}>
-        <Text style={styles.instructionsTitle}>OCR Scanning Tips:</Text>
-        <View style={styles.tipsList}>
-          <View style={styles.tipItem}>
-            <Text style={styles.tipNumber}>1.</Text>
-            <Text style={styles.tipText}>Ensure the bill is well-lit and text is clearly visible</Text>
+        {/* Title */}
+        <Text style={styles.title}>Step 1: Upload Your Bill</Text>
+        <Text style={styles.subtitle}>Upload an image of your restaurant bill</Text>
+
+        {/* Image Upload Cards */}
+        <View style={styles.uploadCardContainer}>
+          <TouchableOpacity style={styles.uploadCard} onPress={pickImage}>
+            <View style={styles.uploadIconContainer}>
+              <Text style={styles.uploadIcon}>🖼️</Text>
+            </View>
+            <Text style={styles.uploadCardTitle}>Gallery</Text>
+            <Text style={styles.uploadCardSubtitle}>Select from your photos</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.uploadCard} onPress={takePhoto}>
+            <View style={styles.uploadIconContainer}>
+              <Text style={styles.uploadIcon}>📷</Text>
+            </View>
+            <Text style={styles.uploadCardTitle}>Camera</Text>
+            <Text style={styles.uploadCardSubtitle}>Take a photo now</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Image Preview */}
+        {uploadedImagePath ? (
+          <View style={styles.previewContainer}>
+            <View style={styles.previewHeader}>
+              <Text style={styles.previewTitle}>Bill Preview</Text>
+              <TouchableOpacity onPress={() => setUploadedImagePath(null)}>
+                <Text style={styles.removeButton}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <Image source={{ uri: uploadedImagePath }} style={styles.imagePreview} />
+            
+            {/* Analyze Button */}
+            <TouchableOpacity 
+              style={[styles.analyzeButton, isProcessing && styles.disabledButton]} 
+              onPress={analyzeReceipt}
+              disabled={isProcessing}
+            >
+              <Text style={styles.analyzeButtonText}>
+                {isProcessing ? 'Processing...' : 'Analyze Receipt'}
+              </Text>
+            </TouchableOpacity>
           </View>
-          <View style={styles.tipItem}>
-            <Text style={styles.tipNumber}>2.</Text>
-            <Text style={styles.tipText}>Avoid shadows and glare on the receipt</Text>
+        ) : (
+          <View style={styles.noImageContainer}>
+            <Text style={styles.noImageText}>Your bill preview will appear here</Text>
           </View>
-          <View style={styles.tipItem}>
-            <Text style={styles.tipNumber}>3.</Text>
-            <Text style={styles.tipText}>Make sure the entire bill is in the frame</Text>
-          </View>
-          <View style={styles.tipItem}>
-            <Text style={styles.tipNumber}>4.</Text>
-            <Text style={styles.tipText}>Hold the camera steady to avoid blurry images</Text>
+        )}
+
+        {/* OCR Tips */}
+        <View style={styles.instructionsBox}>
+          <Text style={styles.instructionsTitle}>OCR Scanning Tips:</Text>
+          <View style={styles.tipsList}>
+            <View style={styles.tipItem}>
+              <Text style={styles.tipNumber}>1.</Text>
+              <Text style={styles.tipText}>Ensure the bill is well-lit and text is clearly visible</Text>
+            </View>
+            <View style={styles.tipItem}>
+              <Text style={styles.tipNumber}>2.</Text>
+              <Text style={styles.tipText}>Avoid shadows and glare on the receipt</Text>
+            </View>
+            <View style={styles.tipItem}>
+              <Text style={styles.tipNumber}>3.</Text>
+              <Text style={styles.tipText}>Make sure the entire bill is in the frame</Text>
+            </View>
+            <View style={styles.tipItem}>
+              <Text style={styles.tipNumber}>4.</Text>
+              <Text style={styles.tipText}>Hold the camera steady to avoid blurry images</Text>
+            </View>
           </View>
         </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  // Add style for SafeAreaView
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#E8F5E9', // Match the container background
+  },
   container: {
     flex: 1,
-    backgroundColor: '#E8F5E9',
+    // backgroundColor is now handled by SafeAreaView
   },
   contentContainer: {
     padding: 20,
-    paddingBottom: 40,
+    paddingBottom: 40, // Keep bottom padding for scroll content
   },
   progressBarContainer: {
     width: '100%',

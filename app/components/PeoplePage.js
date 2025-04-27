@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 
 export default function PeoplePage() {
@@ -65,144 +66,151 @@ export default function PeoplePage() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      {/* Progress Bar */}
-      <View style={styles.progressBarContainer}>
-        <View style={[styles.progressBar, { width: '50%' }]} />
-      </View>
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+        {/* Progress Bar */}
+        <View style={styles.progressBarContainer}>
+          <View style={[styles.progressBar, { width: '50%' }]} />
+        </View>
 
-      {/* Tabs */}
-      <View style={styles.tabsContainer}>
-        <TouchableOpacity style={styles.tabButton} onPress={() => router.push('/')}>
-          <Text style={styles.tabText}>Upload Bill</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.tabButton, styles.activeTab]}>
-          <Text style={[styles.tabText, styles.activeTabText]}>Add People</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.tabButton} onPress={() => router.push('/components/ItemsPage')}>
-          <Text style={styles.tabText}>Assign Items</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.tabButton} onPress={() => router.push('/components/SummaryPage')}>
-          <Text style={styles.tabText}>Summary</Text>
-        </TouchableOpacity>
-      </View>
+        {/* Tabs */}
+        <View style={styles.tabsContainer}>
+          <TouchableOpacity style={styles.tabButton} onPress={() => router.push('/')}>
+            <Text style={styles.tabText}>Upload Bill</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.tabButton, styles.activeTab]}>
+            <Text style={[styles.tabText, styles.activeTabText]}>Add People</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.tabButton} onPress={() => router.push('/components/ItemsPage')}>
+            <Text style={styles.tabText}>Assign Items</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.tabButton} onPress={() => router.push('/components/SummaryPage')}>
+            <Text style={styles.tabText}>Summary</Text>
+          </TouchableOpacity>
+        </View>
 
-      {/* Title and Subtitle */}
-      <Text style={styles.title}>Step 2: Add People to Split With</Text>
-      <Text style={styles.subtitle}>Add everyone who's splitting the bill</Text>
+        {/* Title and Subtitle */}
+        <Text style={styles.title}>Step 2: Add People to Split With</Text>
+        <Text style={styles.subtitle}>Add everyone who's splitting the bill</Text>
 
-      {/* Add Person Input (moved to the top since there are no initial people) */}
-      <View style={styles.addPersonContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Add person's name"
-          value={personName}
-          onChangeText={setPersonName}
-          onSubmitEditing={addPerson}
-        />
-        <TouchableOpacity style={styles.addButton} onPress={addPerson}>
-          <Text style={styles.addButtonText}>+ Add</Text>
-        </TouchableOpacity>
-      </View>
+        {/* Add Person Input (moved to the top since there are no initial people) */}
+        <View style={styles.addPersonContainer}>
+          <TextInput
+            style={styles.input}
+            placeholder="Add person's name"
+            value={personName}
+            onChangeText={setPersonName}
+            onSubmitEditing={addPerson}
+          />
+          <TouchableOpacity style={styles.addButton} onPress={addPerson}>
+            <Text style={styles.addButtonText}>+ Add</Text>
+          </TouchableOpacity>
+        </View>
 
-      {/* People List */}
-      {people.length > 0 ? (
-        people.map((person) => (
-          <View key={person.id} style={styles.personCard}>
-            <View style={styles.personInfo}>
-              <View style={[styles.avatar, { backgroundColor: person.color }]}>
-                <Text style={styles.avatarText}>{person.initial}</Text>
-              </View>
-              <Text style={styles.personName}>{person.name}</Text>
-              {person.paidBill && (
-                <View style={styles.paidBadge}>
-                  <Text style={styles.paidBadgeText}>Paid the bill</Text>
+        {/* People List */}
+        {people.length > 0 ? (
+          people.map((person) => (
+            <View key={person.id} style={styles.personCard}>
+              <View style={styles.personInfo}>
+                <View style={[styles.avatar, { backgroundColor: person.color }]}>
+                  <Text style={styles.avatarText}>{person.initial}</Text>
                 </View>
-              )}
+                <Text style={styles.personName}>{person.name}</Text>
+                {person.paidBill && (
+                  <View style={styles.paidBadge}>
+                    <Text style={styles.paidBadgeText}>Paid the bill</Text>
+                  </View>
+                )}
+              </View>
+              <TouchableOpacity onPress={() => removePerson(person.id)}>
+                <Text style={styles.removeButton}>✕</Text>
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity onPress={() => removePerson(person.id)}>
-              <Text style={styles.removeButton}>✕</Text>
-            </TouchableOpacity>
+          ))
+        ) : (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyStateText}>
+              Add people who are splitting the bill
+            </Text>
           </View>
-        ))
-      ) : (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyStateText}>
-            Add people who are splitting the bill
+        )}
+
+        {/* Who Paid the Bill Section - only shown if there are people */}
+        {people.length > 0 && (
+          <>
+            <Text style={styles.sectionTitle}>Who Paid the Bill?</Text>
+            <View style={styles.payerContainer}>
+              {people.map((person) => (
+                <TouchableOpacity
+                  key={person.id}
+                  style={styles.payerOption}
+                  onPress={() => handlePaidBySelection(person.id)}
+                >
+                  <View style={[styles.radioButton, paidBy === person.id && styles.radioButtonSelected]}>
+                    <View style={styles.innerCircle}>
+                      {paidBy === person.id && <View style={styles.selectedDot} />}
+                    </View>
+                  </View>
+                  <View style={[styles.smallAvatar, { backgroundColor: person.color }]}>
+                    <Text style={styles.smallAvatarText}>{person.initial}</Text>
+                  </View>
+                  <Text style={styles.payerName}>{person.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </>
+        )}
+
+        {/* Next Step Instructions */}
+        <View style={styles.instructionsBox}>
+          <Text style={styles.instructionsTitle}>Next step:</Text>
+          <Text style={styles.instructionsText}>
+            After adding everyone, you'll assign bill items to each person in the next step.
           </Text>
         </View>
-      )}
 
-      {/* Who Paid the Bill Section - only shown if there are people */}
-      {people.length > 0 && (
-        <>
-          <Text style={styles.sectionTitle}>Who Paid the Bill?</Text>
-          <View style={styles.payerContainer}>
-            {people.map((person) => (
-              <TouchableOpacity
-                key={person.id}
-                style={styles.payerOption}
-                onPress={() => handlePaidBySelection(person.id)}
-              >
-                <View style={[styles.radioButton, paidBy === person.id && styles.radioButtonSelected]}>
-                  <View style={styles.innerCircle}>
-                    {paidBy === person.id && <View style={styles.selectedDot} />}
-                  </View>
-                </View>
-                <View style={[styles.smallAvatar, { backgroundColor: person.color }]}>
-                  <Text style={styles.smallAvatarText}>{person.initial}</Text>
-                </View>
-                <Text style={styles.payerName}>{person.name}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </>
-      )}
-
-      {/* Next Step Instructions */}
-      <View style={styles.instructionsBox}>
-        <Text style={styles.instructionsTitle}>Next step:</Text>
-        <Text style={styles.instructionsText}>
-          After adding everyone, you'll assign bill items to each person in the next step.
-        </Text>
-      </View>
-
-      {/* Navigation Buttons */}
-      <View style={styles.navigationContainer}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Text style={styles.backButtonText}>← Back</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.nextButton, people.length === 0 && styles.disabledButton]}
-          disabled={people.length === 0}
-          onPress={() => {
-            if (people.length > 0) {
-              // Use router.push instead of navigation.navigate
-              router.push({
-                pathname: '/components/ItemsPage',
-                params: {
-                  items: params.items,
-                  people: JSON.stringify(people),
-                  paidBy
-                }
-              });
-            }
-          }}
-        >
-          <Text style={styles.nextButtonText}>Next →</Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+        {/* Navigation Buttons */}
+        <View style={styles.navigationContainer}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <Text style={styles.backButtonText}>← Back</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.nextButton, people.length === 0 && styles.disabledButton]}
+            disabled={people.length === 0}
+            onPress={() => {
+              if (people.length > 0) {
+                // Use router.push instead of navigation.navigate
+                router.push({
+                  pathname: '/components/ItemsPage',
+                  params: {
+                    items: params.items,
+                    people: JSON.stringify(people),
+                    paidBy
+                  }
+                });
+              }
+            }}
+          >
+            <Text style={styles.nextButtonText}>Next →</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#E8F5E9', // Match the container background
+  },
   container: {
     flex: 1,
-    backgroundColor: '#E8F5E9',
+    // backgroundColor is now handled by SafeAreaView
   },
   contentContainer: {
     padding: 20,
+    paddingBottom: 40, // Keep bottom padding for scroll content
   },
   progressBarContainer: {
     width: '100%',
