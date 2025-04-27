@@ -7,7 +7,7 @@ import { useAppContext } from '../context/AppContext';
 export default function SummaryPage() {
   const router = useRouter();
   
-  // Use global context instead of local state
+  // Get all necessary data from context
   const { 
     items, 
     people,
@@ -17,6 +17,12 @@ export default function SummaryPage() {
     sharedItems
   } = useAppContext();
 
+  // Get the person who paid
+  const getPayer = () => {
+    return people.find(person => person.id === paidBy) || null;
+  };
+  
+  // Calculate the total bill amount
   const calculateTotal = () => {
     let total = 0;
     items.forEach(item => {
@@ -25,122 +31,80 @@ export default function SummaryPage() {
     return total.toFixed(2);
   };
 
-  const getPersonById = (id) => {
-    return people.find(person => person.id === id) || null;
-  };
-
-  const getPayer = () => {
-    return getPersonById(paidBy);
-  };
-
-  const calculateOwes = () => {
-    const owes = {};
-    const payer = getPayer();
+  // Calculate who owes what
+  const calculateSplitAmounts = () => {
+    console.log('--------- DEBUGGING BILL SPLIT ---------');
+    console.log('Items:', JSON.stringify(items.map(item => ({
+      name: item.name,
+      price: item.price,
+      unitPrice: item.unitPrice,
+      quantity: item.quantity,
+      total: (item.unitPrice || 0) * (item.quantity || 1)
+    }))));
+    console.log('Assignments:', JSON.stringify(assignments));
+    console.log('Person Item Quantities:', JSON.stringify(personItemQuantities));
+    console.log('People:', JSON.stringify(people.map(p => ({ id: p.id, name: p.name }))));
     
-    // Initialize all people with 0
+    // Step 1: Calculate total bill amount
+    let totalBillAmount = 0;
+    items.forEach(item => {
+      totalBillAmount += (item.unitPrice || 0) * (item.quantity || 1);
+    });
+    console.log(`Total Bill Amount: $${totalBillAmount.toFixed(2)}`);
+    
+    // Step 2: Calculate what each person owes for their items
+    const owes = {};
     people.forEach(person => {
       owes[person.id] = 0;
     });
-
-    // Calculate what each person owes based on assignments
-    Object.keys(assignments).forEach(itemIndex => {
-      const item = items[itemIndex];
-      if (!item) return;
+    
+    // Process each item
+    items.forEach((item, index) => {
+      const itemIndex = index.toString();
+      const itemPrice = (item.unitPrice || 0) * (item.quantity || 1);
       
-      const totalPrice = (item.unitPrice || 0) * (item.quantity || 1);
-      const assignedPeople = assignments[itemIndex] || [];
+      // Get people assigned to this item - check both assignments and quantities
+      let peopleAssigned = assignments[itemIndex] || [];
       
-      if (assignedPeople.length > 0) {
-        // For quantity = 1, split equally among assigned people
-        if (item.quantity === 1 || !item.quantity) {
-          const pricePerPerson = totalPrice / assignedPeople.length;
-          assignedPeople.forEach(personId => {
-            owes[personId] = (owes[personId] || 0) + pricePerPerson;
-          });
-        } else {
-          // For items with quantities > 1 and Shared switch OFF
-          // Each person pays for what they consumed
-          const unitPrice = item.unitPrice || 0;
-          
-          assignedPeople.forEach(personId => {
-            // Get the quantity this person consumed
-            const personQuantity = personItemQuantities[itemIndex]?.[personId] || 0;
-            if (personQuantity > 0) {
-              // Calculate what this person owes based on their consumption
-              const personCost = unitPrice * personQuantity;
-              owes[personId] = (owes[personId] || 0) + personCost;
-            }
-          });
-        }
+      // Also check personItemQuantities to find anyone with quantity > 0
+      if (personItemQuantities[itemIndex]) {
+        Object.entries(personItemQuantities[itemIndex]).forEach(([personId, qty]) => {
+          if (qty > 0 && !peopleAssigned.includes(personId)) {
+            peopleAssigned.push(personId);
+          }
+        });
       }
+      
+      console.log(`Item ${index}: ${item.name} - $${itemPrice} - Assigned to ${peopleAssigned.length} people`);
+      
+      // Skip if no one is assigned to this item
+      if (peopleAssigned.length === 0) {
+        console.log(`  WARNING: No one assigned to ${item.name} ($${itemPrice})`);
+        return;
+      }
+      
+      // Split equally among assigned people
+      const pricePerPerson = itemPrice / peopleAssigned.length;
+      console.log(`  Price per person: $${pricePerPerson}`);
+      
+      peopleAssigned.forEach(personId => {
+        owes[personId] = (owes[personId] || 0) + pricePerPerson;
+        const personName = people.find(p => p.id === personId)?.name;
+        console.log(`  ${personName} (${personId}) now owes: $${owes[personId].toFixed(2)}`);
+      });
     });
-
+    
     // The person who paid should receive money, not pay
-    if (payer) {
-      owes[payer.id] = 0;
+    if (paidBy) {
+      owes[paidBy] = 0;
+      console.log(`Payer ${paidBy} reset to $0.00`);
     }
-
+    
+    // Log final amounts
+    console.log('Final amounts owed:', JSON.stringify(owes));
+    console.log('--------- END DEBUGGING ---------');
+    
     return owes;
-  };
-
-  const renderSummary = () => {
-    if (people.length === 0 || items.length === 0) {
-      return (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyStateText}>
-            No data to display. Please go back and complete the previous steps.
-          </Text>
-        </View>
-      );
-    }
-
-    const payer = getPayer();
-    const owesData = calculateOwes();
-
-    return (
-      <View>
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryCardTitle}>Bill Summary</Text>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Total Bill:</Text>
-            <Text style={styles.summaryValue}>${calculateTotal()}</Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Paid by:</Text>
-            <View style={styles.payerInfo}>
-              <View style={[styles.miniAvatar, payer && { backgroundColor: payer.color }]}>
-                <Text style={styles.miniAvatarText}>{payer ? payer.initial : "?"}</Text>
-              </View>
-              <Text style={styles.summaryValue}>{payer ? payer.name : "Unknown"}</Text>
-            </View>
-          </View>
-        </View>
-
-        <Text style={styles.sectionTitle}>Who Owes What</Text>
-
-        {people.map(person => {
-          if (person.id === paidBy) return null; // Skip the payer
-          
-          const amount = owesData[person.id] || 0;
-          if (amount <= 0) return null;
-          
-          return (
-            <View key={person.id} style={styles.oweCard}>
-              <View style={styles.personInfo}>
-                <View style={[styles.avatar, { backgroundColor: person.color }]}>
-                  <Text style={styles.avatarText}>{person.initial}</Text>
-                </View>
-                <Text style={styles.personName}>{person.name}</Text>
-              </View>
-              <View style={styles.amountContainer}>
-                <Text style={styles.oweAmount}>${amount.toFixed(2)}</Text>
-                <Text style={styles.oweLabel}>to {payer ? payer.name : "payer"}</Text>
-              </View>
-            </View>
-          );
-        })}
-      </View>
-    );
   };
 
   return (
@@ -171,7 +135,67 @@ export default function SummaryPage() {
         <Text style={styles.title}>Step 4: Summary</Text>
         <Text style={styles.subtitle}>See who owes what to whom</Text>
 
-        {renderSummary()}
+        {/* Bill Summary */}
+        <View style={styles.summaryCard}>
+          <Text style={styles.summaryCardTitle}>Bill Summary</Text>
+          
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Total Bill:</Text>
+            <Text style={styles.summaryValue}>${calculateTotal()}</Text>
+          </View>
+          
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Paid by:</Text>
+            <View style={styles.payerInfo}>
+              {paidBy ? (
+                <>
+                  <View style={[styles.miniAvatar, { backgroundColor: getPayer()?.color || '#BDBDBD' }]}>
+                    <Text style={styles.miniAvatarText}>{getPayer()?.initial || '?'}</Text>
+                  </View>
+                  <Text style={styles.summaryValue}>{getPayer()?.name || 'Unknown'}</Text>
+                </>
+              ) : (
+                <Text style={styles.summaryValue}>Not specified</Text>
+              )}
+            </View>
+          </View>
+        </View>
+
+        {/* Who Owes What Section */}
+        <Text style={styles.sectionTitle}>Who Owes What</Text>
+        
+        {people.length > 0 ? (
+          people.map(person => {
+            // Skip the person who paid
+            if (person.id === paidBy) return null;
+            
+            const amount = calculateSplitAmounts()[person.id] || 0;
+            
+            // Only show if they owe money
+            if (amount <= 0) return null;
+            
+            return (
+              <View key={person.id} style={styles.oweCard}>
+                <View style={styles.personInfo}>
+                  <View style={[styles.avatar, { backgroundColor: person.color }]}>
+                    <Text style={styles.avatarText}>{person.initial}</Text>
+                  </View>
+                  <Text style={styles.personName}>{person.name}</Text>
+                </View>
+                <View style={styles.amountContainer}>
+                  <Text style={styles.oweAmount}>${amount.toFixed(2)}</Text>
+                  <Text style={styles.oweLabel}>to {getPayer()?.name || 'payer'}</Text>
+                </View>
+              </View>
+            );
+          })
+        ) : (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyStateText}>
+              No people added yet. Go back to add people who participated in the bill.
+            </Text>
+          </View>
+        )}
 
         {/* Instructions Box */}
         <View style={styles.instructionsBox}>
@@ -196,18 +220,16 @@ export default function SummaryPage() {
 }
 
 const styles = StyleSheet.create({
-  // Add style for SafeAreaView
   safeArea: {
     flex: 1,
-    backgroundColor: '#E8F5E9', // Match the container background
+    backgroundColor: '#E8F5E9',
   },
   container: {
     flex: 1,
-    // backgroundColor is now handled by SafeAreaView
   },
   contentContainer: {
     padding: 20,
-    paddingBottom: 40, // Keep bottom padding for scroll content
+    paddingBottom: 40,
   },
   progressBarContainer: {
     width: '100%',
@@ -256,18 +278,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#757575',
     marginBottom: 20,
-    textAlign: 'center',
-  },
-  emptyState: {
-    padding: 20,
-    backgroundColor: '#F5F5F5',
-    borderRadius: 8,
-    alignItems: 'center',
-    marginVertical: 20,
-  },
-  emptyStateText: {
-    color: '#757575',
-    fontSize: 16,
     textAlign: 'center',
   },
   summaryCard: {
@@ -374,6 +384,18 @@ const styles = StyleSheet.create({
   oweLabel: {
     fontSize: 12,
     color: '#757575',
+  },
+  emptyState: {
+    padding: 20,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 8,
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  emptyStateText: {
+    color: '#757575',
+    fontSize: 16,
+    textAlign: 'center',
   },
   instructionsBox: {
     backgroundColor: '#E3F2FD',
