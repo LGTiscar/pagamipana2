@@ -149,9 +149,17 @@ export default function ItemsPage() {
 
   const isAllItemsAssigned = () => {
     // Check if every item has at least one person assigned
-    return items.length > 0 && items.every((item, index) => 
-      assignments[index] && assignments[index].length > 0
-    );
+    return items.length > 0 && items.every((item, index) => {
+      // Check if there's a direct assignment in the assignments object
+      const hasDirectAssignments = assignments[index] && assignments[index].length > 0;
+      
+      // Also check if any person has a quantity > 0 for this item
+      const hasQuantityAssignments = Boolean(personItemQuantities[index] && 
+        Object.values(personItemQuantities[index]).some(qty => qty > 0));
+      
+      // Return true if either condition is met
+      return hasDirectAssignments || hasQuantityAssignments;
+    });
   };
 
   // Helper function to calculate the sum of quantities for an item
