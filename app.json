@@ -51,6 +51,8 @@
       "typedRoutes": true
     },
     "extra": {
+      // Define the key for the API key. Expo will load the value from .env
+      "apiKey": null, // Or use an empty string "" or a default placeholder
       "router": {
         "origin": false
       },
