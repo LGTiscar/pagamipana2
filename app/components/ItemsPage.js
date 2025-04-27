@@ -102,23 +102,58 @@ export default function ItemsPage() {
   }, [items, people]);
 
   const togglePersonForItem = (itemIndex, personId) => {
+    const item = items[itemIndex];
+    const itemQuantity = item?.quantity || 1;
+    const personCurrentQuantity = personItemQuantities[itemIndex]?.[personId] || 0;
+
     setAssignments(prevAssignments => {
       const currentAssignment = prevAssignments[itemIndex] || [];
-      
-      // If person already assigned, remove them
-      if (currentAssignment.includes(personId)) {
-        return {
-          ...prevAssignments,
-          [itemIndex]: currentAssignment.filter(id => id !== personId)
-        };
+      const isCurrentlyAssigned = currentAssignment.includes(personId);
+
+      // Logic for items with quantity > 1
+      if (itemQuantity > 1) {
+        // If person is not currently assigned and their quantity is 0,
+        // clicking the bubble should do nothing. Assignment happens via '+' button.
+        if (!isCurrentlyAssigned && personCurrentQuantity === 0) {
+          return prevAssignments;
+        }
+        
+        // If person is assigned and has quantity > 0, clicking bubble unassigns them and resets quantity to 0
+        if (isCurrentlyAssigned) {
+          // Also reset their quantity to 0 when unassigning via bubble click
+          setPersonItemQuantities(prevQuantities => {
+            const newQuantities = { ...prevQuantities };
+            if (!newQuantities[itemIndex]) {
+              newQuantities[itemIndex] = {};
+            }
+            newQuantities[itemIndex][personId] = 0;
+            return newQuantities;
+          });
+          
+          return {
+            ...prevAssignments,
+            [itemIndex]: currentAssignment.filter(id => id !== personId)
+          };
+        }
       } 
-      // Otherwise add them
+      // Logic for items with quantity === 1
       else {
-        return {
-          ...prevAssignments,
-          [itemIndex]: [...currentAssignment, personId]
-        };
+        // Simply toggle assignment for quantity=1 items
+        if (isCurrentlyAssigned) {
+          return {
+            ...prevAssignments,
+            [itemIndex]: currentAssignment.filter(id => id !== personId)
+          };
+        } else {
+          return {
+            ...prevAssignments,
+            [itemIndex]: [...currentAssignment, personId]
+          };
+        }
       }
+      
+      // If we reach here, no changes needed
+      return prevAssignments;
     });
   };
 
@@ -285,10 +320,65 @@ export default function ItemsPage() {
     });
   };
 
+  // Function to increase item quantity
+  const increaseItemQuantity = (index) => {
+    setItems(prevItems => {
+      const newItems = [...prevItems];
+      const currentQuantity = newItems[index].quantity || 1;
+      newItems[index] = { ...newItems[index], quantity: currentQuantity + 1 };
+      // Recalculate unit price if quantity changes and total price exists
+      if (newItems[index].price && !newItems[index].unitPrice) {
+         newItems[index].unitPrice = newItems[index].price / newItems[index].quantity;
+      }
+      return newItems;
+    });
+  };
+
+  // Function to decrease item quantity (minimum 1)
+  const decreaseItemQuantity = (index) => {
+    setItems(prevItems => {
+      const newItems = [...prevItems];
+      const currentQuantity = newItems[index].quantity || 1;
+      if (currentQuantity > 1) {
+        newItems[index] = { ...newItems[index], quantity: currentQuantity - 1 };
+        // Recalculate unit price if quantity changes and total price exists
+        if (newItems[index].price && !newItems[index].unitPrice) {
+           newItems[index].unitPrice = newItems[index].price / newItems[index].quantity;
+        }
+
+        // Check if assigned quantity exceeds new item quantity when shared is OFF
+        if (!sharedItems[index]) {
+          const newQuantity = newItems[index].quantity;
+          const totalAssigned = calculateTotalAssignedQuantity(index);
+          if (totalAssigned > newQuantity) {
+            // Reset assignments and quantities for this item
+            setPersonItemQuantities(prevQuantities => {
+              const resetQuantities = { ...prevQuantities, [index]: {} };
+              people.forEach(person => {
+                resetQuantities[index][person.id] = 0;
+              });
+              return resetQuantities;
+            });
+            setAssignments(prevAssignments => ({ ...prevAssignments, [index]: [] }));
+            Alert.alert(
+              "Assignments Reset",
+              `Item quantity reduced. Assignments for "${newItems[index].name}" have been reset as assigned portions exceeded the new quantity.`,
+              [{ text: "OK" }]
+            );
+          }
+        }
+      }
+      return newItems;
+    });
+  };
+
   const renderItem = ({ item, index }) => {
-    const itemQuantity = item.quantity || 1;
-    const showQuantityControls = itemQuantity > 1;
+    // Use the quantity from the state
+    const itemQuantity = items[index]?.quantity || 1;
+    // Show controls if original quantity > 1 OR current state quantity > 1
+    const showQuantityControls = (item.quantity || 1) > 1 || itemQuantity > 1;
     const currentTotalAssigned = calculateTotalAssignedQuantity(index);
+    // Calculate remaining based on the current state quantity
     const remainingQuantity = itemQuantity - currentTotalAssigned;
     
     return (
@@ -304,13 +394,23 @@ export default function ItemsPage() {
               <View style={styles.quantityControlContainer}>
                 <Text style={styles.quantityLabel}>Quantity:</Text>
                 <View style={styles.quantityControls}>
-                  <TouchableOpacity style={styles.quantityButton}>
+                  {/* Decrease Button */}
+                  <TouchableOpacity
+                    style={[styles.quantityButton, itemQuantity <= 1 && styles.disabledQuantityButton]}
+                    onPress={() => decreaseItemQuantity(index)}
+                    disabled={itemQuantity <= 1}
+                  >
                     <Text style={styles.quantityButtonText}>−</Text>
                   </TouchableOpacity>
-                  
+
+                  {/* Quantity Value */}
                   <Text style={styles.quantityValue}>{itemQuantity}</Text>
-                  
-                  <TouchableOpacity style={styles.quantityButton}>
+
+                  {/* Increase Button */}
+                  <TouchableOpacity
+                    style={styles.quantityButton}
+                    onPress={() => increaseItemQuantity(index)}
+                  >
                     <Text style={styles.quantityButtonText}>+</Text>
                   </TouchableOpacity>
                 </View>
@@ -333,20 +433,25 @@ export default function ItemsPage() {
           </View>
         </View>
 
+        {/* Unit Price Display (adjust based on state quantity) */}
         {showQuantityControls && (
           <View style={styles.unitPriceContainer}>
-            <Text style={styles.itemUnitPrice}>@ ${item.unitPrice?.toFixed(2) || '0.00'} each</Text>
+             {/* Use items[index] to get potentially updated unit price */}
+             <Text style={styles.itemUnitPrice}>@ ${(items[index]?.unitPrice || 0).toFixed(2)} each</Text>
           </View>
         )}
         
-        {/* Display remaining quantity if it's a multi-quantity item and not shared */}
+        {/* Remaining Portions Display (adjust based on state quantity) */}
         {showQuantityControls && !sharedItems[index] && (
           <View style={styles.remainingContainer}>
             <Text style={[
               styles.remainingText,
-              remainingQuantity === 0 ? styles.remainingZero : null
+              remainingQuantity === 0 ? styles.remainingZero : null,
+              remainingQuantity < 0 ? styles.remainingNegative : null // Style for negative remaining
             ]}>
-              {remainingQuantity} {remainingQuantity === 1 ? 'portion' : 'portions'} remaining to assign
+              {remainingQuantity < 0
+                ? `${Math.abs(remainingQuantity)} ${Math.abs(remainingQuantity) === 1 ? 'portion' : 'portions'} OVER assigned`
+                : `${remainingQuantity} ${remainingQuantity === 1 ? 'portion' : 'portions'} remaining to assign`}
             </Text>
           </View>
         )}
@@ -909,5 +1014,12 @@ const styles = StyleSheet.create({
   },
   remainingZero: {
     color: '#D32F2F',
+  },
+  disabledQuantityButton: {
+    backgroundColor: '#F5F5F5', // Lighter background for disabled
+  },
+  remainingNegative: {
+    color: '#FF9800', // Orange color for over-assigned warning
+    fontWeight: 'bold',
   },
 });
