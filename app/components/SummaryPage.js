@@ -43,6 +43,7 @@ export default function SummaryPage() {
     }))));
     console.log('Assignments:', JSON.stringify(assignments));
     console.log('Person Item Quantities:', JSON.stringify(personItemQuantities));
+    console.log('Shared Items:', JSON.stringify(sharedItems));
     console.log('People:', JSON.stringify(people.map(p => ({ id: p.id, name: p.name }))));
     
     // Step 1: Calculate total bill amount
@@ -61,7 +62,10 @@ export default function SummaryPage() {
     // Process each item
     items.forEach((item, index) => {
       const itemIndex = index.toString();
-      const itemPrice = (item.unitPrice || 0) * (item.quantity || 1);
+      const unitPrice = item.unitPrice || 0;
+      const isShared = sharedItems[itemIndex] || false;
+      const itemQuantity = item.quantity || 1;
+      const totalItemPrice = unitPrice * itemQuantity;
       
       // Get people assigned to this item - check both assignments and quantities
       let peopleAssigned = assignments[itemIndex] || [];
@@ -75,23 +79,61 @@ export default function SummaryPage() {
         });
       }
       
-      console.log(`Item ${index}: ${item.name} - $${itemPrice} - Assigned to ${peopleAssigned.length} people`);
+      console.log(`Item ${index}: ${item.name} - Unit Price: $${unitPrice} x ${itemQuantity} units = $${totalItemPrice} - Assigned to ${peopleAssigned.length} people - Shared: ${isShared}`);
       
       // Skip if no one is assigned to this item
       if (peopleAssigned.length === 0) {
-        console.log(`  WARNING: No one assigned to ${item.name} ($${itemPrice})`);
+        console.log(`  WARNING: No one assigned to ${item.name} ($${totalItemPrice})`);
         return;
       }
       
-      // Split equally among assigned people
-      const pricePerPerson = itemPrice / peopleAssigned.length;
-      console.log(`  Price per person: $${pricePerPerson}`);
-      
-      peopleAssigned.forEach(personId => {
-        owes[personId] = (owes[personId] || 0) + pricePerPerson;
-        const personName = people.find(p => p.id === personId)?.name;
-        console.log(`  ${personName} (${personId}) now owes: $${owes[personId].toFixed(2)}`);
-      });
+      // Different splitting logic based on shared status and quantity
+      if (isShared && itemQuantity > 1 && personItemQuantities[itemIndex]) {
+        // CASE: Shared item with quantity > 1
+        // In this case, we handle each unit of the item separately
+        
+        // Loop through each unit of the item
+        for (let unitIndex = 0; unitIndex < itemQuantity; unitIndex++) {
+          // For each unit, find who participated in it
+          const participantsForThisUnit = [];
+          
+          peopleAssigned.forEach(personId => {
+            const personParticipationCount = personItemQuantities[itemIndex]?.[personId] || 0;
+            // If person participated in at least this many units, include them for this unit
+            if (personParticipationCount > unitIndex) {
+              participantsForThisUnit.push(personId);
+            }
+          });
+          
+          // Skip if no one participated in this unit (shouldn't happen but just in case)
+          if (participantsForThisUnit.length === 0) {
+            console.log(`  WARNING: No one participated in unit ${unitIndex + 1} of ${item.name}`);
+            continue;
+          }
+          
+          // Split this unit's cost equally among its participants
+          const costPerPersonForThisUnit = unitPrice / participantsForThisUnit.length;
+          
+          console.log(`  Unit ${unitIndex + 1}: $${unitPrice} split among ${participantsForThisUnit.length} people = $${costPerPersonForThisUnit.toFixed(2)} per person`);
+          
+          participantsForThisUnit.forEach(personId => {
+            owes[personId] = (owes[personId] || 0) + costPerPersonForThisUnit;
+            const personName = people.find(p => p.id === personId)?.name;
+            console.log(`    ${personName} (${personId}) now owes: $${owes[personId].toFixed(2)}`);
+          });
+        }
+      } else {
+        // CASE: Regular item or quantity=1 or shared=false
+        // Use equal split among assigned people
+        const pricePerPerson = totalItemPrice / peopleAssigned.length;
+        console.log(`  Regular item, price per person (equal split): $${pricePerPerson}`);
+        
+        peopleAssigned.forEach(personId => {
+          owes[personId] = (owes[personId] || 0) + pricePerPerson;
+          const personName = people.find(p => p.id === personId)?.name;
+          console.log(`  ${personName} (${personId}) now owes: $${owes[personId].toFixed(2)}`);
+        });
+      }
     });
     
     // The person who paid should receive money, not pay
