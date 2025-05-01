@@ -117,10 +117,18 @@ export default function UploadBillPage() {
       router.push('/components/PeoplePage');
     } catch (error) {
       console.error('Error analyzing receipt:', error);
+      
+      // Show a more detailed error message with specific API error information
+      const errorTitle = translate('Error Processing Receipt');
+      const errorMessage = error.apiErrorDetails 
+        ? `${translate('API Error')}: ${error.apiErrorDetails}`
+        : error.message || translate('An unknown error occurred');
+      
       Alert.alert(
-        translate('Error'), 
-        translate('Failed to analyze the receipt. Please try again.')
+        errorTitle, 
+        errorMessage
       );
+      
       // Make sure to reset processing state on error
       setIsProcessing(false);
     }

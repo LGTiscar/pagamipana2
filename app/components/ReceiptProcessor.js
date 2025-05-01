@@ -32,8 +32,9 @@ export default class ReceiptProcessor {
 
   async processReceipt(imageBytes) {
     if (!this.apiKey || typeof this.apiKey !== 'string') {
-      console.error("Cannot process receipt: API Key is missing or invalid.");
-      throw new Error("API Key is not configured correctly. Please check setup.");
+      const errorMsg = "API Key is not configured correctly. Please check setup.";
+      console.error("Cannot process receipt: " + errorMsg);
+      throw new Error(errorMsg);
     }
     try {
       // Convert image to base64
@@ -100,7 +101,8 @@ IMPORTANT: Your response must ONLY contain this JSON object and nothing else.
       });
 
       console.log('Response status:', response.status);
-      console.log('Response data:', response.data);
+      // Log a summary of the response but not the full data which might be too large
+      console.log('Response data structure:', Object.keys(response.data));
 
       if (response.status === 200) {
         const jsonResponse = response.data;
@@ -113,7 +115,9 @@ IMPORTANT: Your response must ONLY contain this JSON object and nothing else.
           !jsonResponse.candidates[0].content.parts ||
           jsonResponse.candidates[0].content.parts.length === 0
         ) {
-          throw new Error('Unexpected response structure from Gemini API');
+          const errorMsg = 'Unexpected response structure from Gemini API';
+          console.error(errorMsg, JSON.stringify(jsonResponse));
+          throw new Error(errorMsg);
         }
 
         const text = jsonResponse.candidates[0].content.parts[0].text;
@@ -126,7 +130,9 @@ IMPORTANT: Your response must ONLY contain this JSON object and nothing else.
 
           // Check if the parsed response contains the expected keys
           if (!parsedResponse.items || !parsedResponse.total) {
-            throw new Error('Parsed response is missing required keys: items or total');
+            const errorMsg = 'Parsed response is missing required keys: items or total';
+            console.error(errorMsg, JSON.stringify(parsedResponse));
+            throw new Error(errorMsg);
           }
 
           const items = parsedResponse.items;
@@ -138,9 +144,9 @@ IMPORTANT: Your response must ONLY contain this JSON object and nothing else.
               item.unitPrice === undefined ||
               item.totalPrice === undefined
             ) {
-              throw new Error(
-                'Item is missing required keys: name, quantity, unitPrice, or totalPrice'
-              );
+              const errorMsg = 'Item is missing required keys: name, quantity, unitPrice, or totalPrice';
+              console.error(errorMsg, JSON.stringify(item));
+              throw new Error(errorMsg);
             }
 
             return BillItem.create({
@@ -151,14 +157,58 @@ IMPORTANT: Your response must ONLY contain this JSON object and nothing else.
             });
           });
         } else {
-          throw new Error('Failed to extract JSON object from response text');
+          const errorMsg = 'Failed to extract JSON object from response text';
+          console.error(errorMsg, text);
+          throw new Error(errorMsg);
         }
       }
 
-      throw new Error(`Failed to process receipt: ${response.status}`);
+      const errorMsg = `Failed to process receipt: HTTP Status ${response.status}`;
+      console.error(errorMsg, response.data);
+      throw new Error(errorMsg);
     } catch (e) {
+      // Enhanced error logging with fucking details as requested
       console.error('Error processing receipt:', e);
-      throw new Error(`Error processing receipt: ${e.message}`);
+      
+      // Check for specific axios error properties
+      if (e.response) {
+        // The request was made and the server responded with a status code outside of 2xx
+        console.error('FUCKING ERROR - Gemini API error response:', {
+          status: e.response.status,
+          statusText: e.response.statusText,
+          data: JSON.stringify(e.response.data, null, 2)
+        });
+        
+        // Create a detailed error message with the actual API error
+        let errorDetails = '';
+        
+        if (e.response.data && e.response.data.error) {
+          const apiError = e.response.data.error;
+          errorDetails = `${apiError.message || ''} (Code: ${apiError.code || 'unknown'}) ${apiError.status || ''}`;
+          // Log the full error object for debugging
+          console.error('FUCKING GEMINI API ERROR DETAILS:', JSON.stringify(apiError, null, 2));
+        } else {
+          errorDetails = `Status: ${e.response.status} - ${e.response.statusText || 'Unknown error'}`;
+          console.error('FUCKING RAW ERROR RESPONSE:', JSON.stringify(e.response.data, null, 2));
+        }
+        
+        // Create a custom error object with apiErrorDetails property
+        const error = new Error(`Gemini API Error: ${errorDetails}`);
+        error.apiErrorDetails = errorDetails;
+        throw error;
+      } else if (e.request) {
+        // The request was made but no response was received
+        console.error('FUCKING NETWORK ERROR - No response received from Gemini API:', e.request);
+        const error = new Error(`No response from Gemini API: Network error or timeout`);
+        error.apiErrorDetails = 'Network error or timeout - server did not respond';
+        throw error;
+      } else {
+        // Something happened in setting up the request
+        console.error('FUCKING REQUEST SETUP ERROR:', e.message);
+        const error = new Error(`Error processing receipt: ${e.message}`);
+        error.apiErrorDetails = e.message;
+        throw error;
+      }
     }
   }
 }
