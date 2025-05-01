@@ -14,7 +14,9 @@ export default function ItemsPage() {
     paidBy, setPaidBy,
     assignments, setAssignments,
     sharedItems, setSharedItems,
-    personItemQuantities, setPersonItemQuantities
+    personItemQuantities, setPersonItemQuantities,
+    translate, // Get translation function
+    currencySymbol // Get currency symbol
   } = useAppContext();
   
   // No need for useEffect to parse params as we're now using global context
@@ -118,10 +120,10 @@ export default function ItemsPage() {
             };
           });
           
-          // Show an alert explaining what happened
+          // Show an alert explaining what happened - translated
           Alert.alert(
-            "Counters Reset",
-            "Shared mode turned off. All counters have been reset to 0.",
+            translate("Counters Reset"),
+            translate("Shared mode turned off. All counters have been reset to 0."),
             [{ text: "OK" }]
           );
         }
@@ -174,10 +176,10 @@ export default function ItemsPage() {
     if (sharedItems[itemIndex]) {
       // SHARED is ON: Each person can have up to item's total quantity
       if (currentPersonQuantity >= itemQuantity) {
-        // Show alert that maximum quantity per person is reached
+        // Show alert that maximum quantity per person is reached - translated
         Alert.alert(
-          "Maximum Quantity Reached",
-          `You cannot assign more than ${itemQuantity} portions of this item per person when shared.`,
+          translate("Maximum Quantity Reached"),
+          translate(`You cannot assign more than ${itemQuantity} portions of this item per person when shared.`),
           [{ text: "OK" }]
         );
         return;
@@ -185,10 +187,10 @@ export default function ItemsPage() {
     } else {
       // SHARED is OFF: Total assigned cannot exceed item quantity
       if (currentAssignedQuantity >= itemQuantity) {
-        // Show alert that maximum quantity is reached
+        // Show alert that maximum quantity is reached - translated
         Alert.alert(
-          "Maximum Quantity Reached",
-          `You cannot assign more than ${itemQuantity} portions for this item.`,
+          translate("Maximum Quantity Reached"),
+          translate(`You cannot assign more than ${itemQuantity} portions for this item.`),
           [{ text: "OK" }]
         );
         return;
@@ -279,8 +281,8 @@ export default function ItemsPage() {
             });
             setAssignments(prevAssignments => ({ ...prevAssignments, [index]: [] }));
             Alert.alert(
-              "Assignments Reset",
-              `Item quantity reduced. Assignments for "${newItems[index].name}" have been reset as assigned portions exceeded the new quantity.`,
+              translate("Assignments Reset"),
+              translate(`Item quantity reduced. Assignments for "${newItems[index].name}" have been reset as assigned portions exceeded the new quantity.`),
               [{ text: "OK" }]
             );
           }
@@ -303,14 +305,14 @@ export default function ItemsPage() {
       <View style={styles.itemCard}>
         <View style={styles.itemHeader}>
           <Text style={styles.itemName}>{item.name}</Text>
-          <Text style={styles.itemPrice}>${getItemTotal(item)}</Text>
+          <Text style={styles.itemPrice}>{currencySymbol}{getItemTotal(item)}</Text>
         </View>
         
         <View style={styles.itemDetails}>
           <View style={styles.itemQuantityPrice}>
             {showQuantityControls ? (
               <View style={styles.quantityControlContainer}>
-                <Text style={styles.quantityLabel}>Quantity:</Text>
+                <Text style={styles.quantityLabel}>{translate("Quantity:")}</Text>
                 <View style={styles.quantityControls}>
                   {/* Decrease Button */}
                   <TouchableOpacity
@@ -334,13 +336,13 @@ export default function ItemsPage() {
                 </View>
               </View>
             ) : (
-              <Text style={styles.itemQuantity}>Qty: {itemQuantity} @ ${item.unitPrice?.toFixed(2) || '0.00'}</Text>
+              <Text style={styles.itemQuantity}>Qty: {itemQuantity} @ {currencySymbol}{item.unitPrice?.toFixed(2) || '0.00'}</Text>
             )}
           </View>
           
           {/* Shared Switch */}
           <View style={styles.sharedContainer}>
-            <Text style={styles.sharedLabel}>Shared</Text>
+            <Text style={styles.sharedLabel}>{translate("Shared")}</Text>
             <Switch
               trackColor={{ false: "#E0E0E0", true: "#A5D6A7" }}
               thumbColor={sharedItems[index] ? "#4CAF50" : "#BDBDBD"}
@@ -355,7 +357,7 @@ export default function ItemsPage() {
         {showQuantityControls && (
           <View style={styles.unitPriceContainer}>
              {/* Use items[index] to get potentially updated unit price */}
-             <Text style={styles.itemUnitPrice}>@ ${(items[index]?.unitPrice || 0).toFixed(2)} each</Text>
+             <Text style={styles.itemUnitPrice}>@ {currencySymbol}{(items[index]?.unitPrice || 0).toFixed(2)} {translate("each")}</Text>
           </View>
         )}
         
@@ -368,8 +370,12 @@ export default function ItemsPage() {
               remainingQuantity < 0 ? styles.remainingNegative : null // Style for negative remaining
             ]}>
               {remainingQuantity < 0
-                ? `${Math.abs(remainingQuantity)} ${Math.abs(remainingQuantity) === 1 ? 'portion' : 'portions'} OVER assigned`
-                : `${remainingQuantity} ${remainingQuantity === 1 ? 'portion' : 'portions'} remaining to assign`}
+                ? `${Math.abs(remainingQuantity)} ${Math.abs(remainingQuantity) === 1 ? 
+                    translate("portion OVER assigned") : 
+                    translate("portions OVER assigned")}`
+                : `${remainingQuantity} ${remainingQuantity === 1 ? 
+                    translate("portion remaining to assign") : 
+                    translate("portions remaining to assign")}`}
             </Text>
           </View>
         )}
@@ -377,10 +383,10 @@ export default function ItemsPage() {
         {/* Show the person assignment section regardless of shared status */}
         <View style={styles.assignmentSection}>
           <View style={styles.assignLabelContainer}>
-            <Text style={styles.assignLabel}>Who participated in this item?</Text>
+            <Text style={styles.assignLabel}>{translate("Who participated in this item?")}</Text>
             {(assignments[index]?.length === 0 || !assignments[index]) && (
               <Text style={styles.unassignedNote}>
-                (If no one is selected, this will be split equally among everyone)
+                ({translate("If no one is selected, this will be split equally among everyone")})
               </Text>
             )}
           </View>
@@ -481,27 +487,27 @@ export default function ItemsPage() {
         {/* Tabs */}
         <View style={styles.tabsContainer}>
           <TouchableOpacity style={styles.tabButton} onPress={() => router.push('/')}>
-            <Text style={styles.tabText}>Upload Bill</Text>
+            <Text style={styles.tabText}>{translate("Upload Bill")}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.tabButton} onPress={() => router.push('/components/PeoplePage')}>
-            <Text style={styles.tabText}>Add People</Text>
+            <Text style={styles.tabText}>{translate("Add People")}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.tabButton, styles.activeTab]}>
-            <Text style={[styles.tabText, styles.activeTabText]}>Assign Items</Text>
+            <Text style={[styles.tabText, styles.activeTabText]}>{translate("Assign Items")}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.tabButton} onPress={() => router.push('/components/SummaryPage')}>
-            <Text style={styles.tabText}>Summary</Text>
+            <Text style={styles.tabText}>{translate("Summary")}</Text>
           </TouchableOpacity>
         </View>
 
         {/* Title and Subtitle */}
-        <Text style={styles.title}>Step 3: Assign Items</Text>
-        <Text style={styles.subtitle}>Select who ordered each item</Text>
+        <Text style={styles.title}>{translate("Step 3: Assign Items")}</Text>
+        <Text style={styles.subtitle}>{translate("Select who ordered each item")}</Text>
 
         {/* Bill Total */}
         <View style={styles.totalContainer}>
-          <Text style={styles.totalLabel}>Bill Total:</Text>
-          <Text style={styles.totalAmount}>${calculateTotal()}</Text>
+          <Text style={styles.totalLabel}>{translate("Bill Total:")}</Text>
+          <Text style={styles.totalAmount}>{currencySymbol}{calculateTotal()}</Text>
         </View>
 
         {/* Bill Items */}
@@ -516,24 +522,25 @@ export default function ItemsPage() {
         ) : (
           <View style={styles.emptyState}>
             <Text style={styles.emptyStateText}>
-              No items found. Please go back to upload a bill.
+              {translate("No items found. Please go back to upload a bill.")}
             </Text>
           </View>
         )}
 
         {/* Instructions Box */}
         <View style={styles.instructionsBox}>
-          <Text style={styles.instructionsTitle}>Next step:</Text>
+          <Text style={styles.instructionsTitle}>{translate("Next step:")}</Text>
           <Text style={styles.instructionsText}>
-            After assigning items, you'll see the summary of what each person owes. 
-            Items without assignments will be split equally among everyone.
+            {translate("After assigning items, you'll see the summary of what each person owes.")}
+            {" "}
+            {translate("Items without assignments will be split equally among everyone.")}
           </Text>
         </View>
 
         {/* Navigation Buttons */}
         <View style={styles.navigationContainer}>
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <Text style={styles.backButtonText}>← Back</Text>
+            <Text style={styles.backButtonText}>{translate("← Back")}</Text>
           </TouchableOpacity>
           <TouchableOpacity 
             style={[styles.nextButton, !isAllItemsAssigned() && styles.disabledButton]} 
@@ -544,7 +551,7 @@ export default function ItemsPage() {
               }
             }}
           >
-            <Text style={styles.nextButtonText}>Next →</Text>
+            <Text style={styles.nextButtonText}>{translate("Next →")}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

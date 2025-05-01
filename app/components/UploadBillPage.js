@@ -14,7 +14,8 @@ export default function UploadBillPage() {
   // Use global context
   const { 
     items, setItems,
-    uploadedImagePath, setUploadedImagePath 
+    uploadedImagePath, setUploadedImagePath,
+    translate // Get translation function
   } = useAppContext();
 
   const requestPermissions = async () => {
@@ -22,7 +23,10 @@ export default function UploadBillPage() {
     const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
 
     if (libraryStatus !== 'granted' || cameraStatus !== 'granted') {
-      Alert.alert('Permissions Required', 'Please grant camera and photo library permissions to continue.');
+      Alert.alert(
+        translate('Permissions Required'), 
+        translate('Please grant camera and photo library permissions to continue.')
+      );
       return false;
     }
     return true;
@@ -84,7 +88,10 @@ export default function UploadBillPage() {
 
   const analyzeReceipt = async () => {
     if (!uploadedImagePath) {
-      Alert.alert('No Image', 'Please upload or take a photo of the bill before analyzing.');
+      Alert.alert(
+        translate('No Image'), 
+        translate('Please upload or take a photo of the bill before analyzing.')
+      );
       return;
     }
 
@@ -110,7 +117,10 @@ export default function UploadBillPage() {
       router.push('/components/PeoplePage');
     } catch (error) {
       console.error('Error analyzing receipt:', error);
-      Alert.alert('Error', 'Failed to analyze the receipt. Please try again.');
+      Alert.alert(
+        translate('Error'), 
+        translate('Failed to analyze the receipt. Please try again.')
+      );
       // Make sure to reset processing state on error
       setIsProcessing(false);
     }
@@ -128,22 +138,22 @@ export default function UploadBillPage() {
         {/* Tabs */}
         <View style={styles.tabsContainer}>
           <TouchableOpacity style={[styles.tabButton, styles.activeTab]}>
-            <Text style={[styles.tabText, styles.activeTabText]}>Upload Bill</Text>
+            <Text style={[styles.tabText, styles.activeTabText]}>{translate("Upload Bill")}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.tabButton} onPress={() => router.push('/components/PeoplePage')}>
-            <Text style={styles.tabText}>Add People</Text>
+            <Text style={styles.tabText}>{translate("Add People")}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.tabButton} onPress={() => router.push('/components/ItemsPage')}>
-            <Text style={styles.tabText}>Assign Items</Text>
+            <Text style={styles.tabText}>{translate("Assign Items")}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.tabButton} onPress={() => router.push('/components/SummaryPage')}>
-            <Text style={styles.tabText}>Summary</Text>
+            <Text style={styles.tabText}>{translate("Summary")}</Text>
           </TouchableOpacity>
         </View>
 
         {/* Title */}
-        <Text style={styles.title}>Step 1: Upload Your Bill</Text>
-        <Text style={styles.subtitle}>Upload an image of your restaurant bill</Text>
+        <Text style={styles.title}>{translate("Step 1: Upload your bill")}</Text>
+        <Text style={styles.subtitle}>{translate("Upload an image of your restaurant bill")}</Text>
 
         {/* Image Upload Cards */}
         <View style={styles.uploadCardContainer}>
@@ -151,16 +161,16 @@ export default function UploadBillPage() {
             <View style={styles.uploadIconContainer}>
               <Text style={styles.uploadIcon}>🖼️</Text>
             </View>
-            <Text style={styles.uploadCardTitle}>Gallery</Text>
-            <Text style={styles.uploadCardSubtitle}>Select from your photos</Text>
+            <Text style={styles.uploadCardTitle}>{translate("Gallery")}</Text>
+            <Text style={styles.uploadCardSubtitle}>{translate("Select from your photos")}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.uploadCard} onPress={takePhoto}>
             <View style={styles.uploadIconContainer}>
               <Text style={styles.uploadIcon}>📷</Text>
             </View>
-            <Text style={styles.uploadCardTitle}>Camera</Text>
-            <Text style={styles.uploadCardSubtitle}>Take a photo now</Text>
+            <Text style={styles.uploadCardTitle}>{translate("Camera")}</Text>
+            <Text style={styles.uploadCardSubtitle}>{translate("Take a photo now")}</Text>
           </TouchableOpacity>
         </View>
 
@@ -168,7 +178,7 @@ export default function UploadBillPage() {
         {uploadedImagePath ? (
           <View style={styles.previewContainer}>
             <View style={styles.previewHeader}>
-              <Text style={styles.previewTitle}>Bill Preview</Text>
+              <Text style={styles.previewTitle}>{translate("Bill Preview")}</Text>
               <TouchableOpacity onPress={() => setUploadedImagePath(null)}>
                 <Text style={styles.removeButton}>✕</Text>
               </TouchableOpacity>
@@ -182,35 +192,35 @@ export default function UploadBillPage() {
               disabled={isProcessing}
             >
               <Text style={styles.analyzeButtonText}>
-                {isProcessing ? 'Processing...' : 'Analyze Receipt'}
+                {isProcessing ? translate("Processing...") : translate("Analyze Receipt")}
               </Text>
             </TouchableOpacity>
           </View>
         ) : (
           <View style={styles.noImageContainer}>
-            <Text style={styles.noImageText}>Your bill preview will appear here</Text>
+            <Text style={styles.noImageText}>{translate("Your bill preview will appear here")}</Text>
           </View>
         )}
 
         {/* OCR Tips */}
         <View style={styles.instructionsBox}>
-          <Text style={styles.instructionsTitle}>OCR Scanning Tips:</Text>
+          <Text style={styles.instructionsTitle}>{translate("OCR Scanning Tips:")}</Text>
           <View style={styles.tipsList}>
             <View style={styles.tipItem}>
               <Text style={styles.tipNumber}>1.</Text>
-              <Text style={styles.tipText}>Ensure the bill is well-lit and text is clearly visible</Text>
+              <Text style={styles.tipText}>{translate("Ensure the bill is well-lit and text is clearly visible")}</Text>
             </View>
             <View style={styles.tipItem}>
               <Text style={styles.tipNumber}>2.</Text>
-              <Text style={styles.tipText}>Avoid shadows and glare on the receipt</Text>
+              <Text style={styles.tipText}>{translate("Avoid shadows and glare on the receipt")}</Text>
             </View>
             <View style={styles.tipItem}>
               <Text style={styles.tipNumber}>3.</Text>
-              <Text style={styles.tipText}>Make sure the entire bill is in the frame</Text>
+              <Text style={styles.tipText}>{translate("Make sure the entire bill is in the frame")}</Text>
             </View>
             <View style={styles.tipItem}>
               <Text style={styles.tipNumber}>4.</Text>
-              <Text style={styles.tipText}>Hold the camera steady to avoid blurry images</Text>
+              <Text style={styles.tipText}>{translate("Hold the camera steady to avoid blurry images")}</Text>
             </View>
           </View>
         </View>

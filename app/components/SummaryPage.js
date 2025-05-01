@@ -17,7 +17,9 @@ export default function SummaryPage() {
     paidBy,
     assignments,
     personItemQuantities,
-    sharedItems
+    sharedItems,
+    translate, // Get translation function
+    currencySymbol // Get currency symbol
   } = useAppContext();
 
   // Get the person who paid
@@ -62,7 +64,7 @@ export default function SummaryPage() {
     items.forEach(item => {
       totalBillAmount += (item.unitPrice || 0) * (item.quantity || 1);
     });
-    console.log(`Total Bill Amount: $${totalBillAmount.toFixed(2)}`);
+    console.log(`Total Bill Amount: ${currencySymbol}${totalBillAmount.toFixed(2)}`);
     
     // Step 2: Calculate what each person owes for their items
     const owes = {};
@@ -96,7 +98,7 @@ export default function SummaryPage() {
         });
       }
       
-      console.log(`Item ${index}: ${item.name} - Unit Price: $${unitPrice} x ${itemQuantity} units = $${totalItemPrice} - Assigned to ${peopleAssigned.length} people - Shared: ${isShared}`);
+      console.log(`Item ${index}: ${item.name} - Unit Price: ${currencySymbol}${unitPrice} x ${itemQuantity} units = ${currencySymbol}${totalItemPrice} - Assigned to ${peopleAssigned.length} people - Shared: ${isShared}`);
       
       // If no one is assigned to this item, split equally among all people
       if (peopleAssigned.length === 0) {
@@ -111,12 +113,12 @@ export default function SummaryPage() {
           itemBreakdowns[person.id].push({
             name: item.name,
             amount: pricePerPerson.toFixed(2),
-            details: "Equal split (unassigned item)",
+            details: translate("Equal split (unassigned item)"),
             quantity: 1,
             shared: true
           });
           
-          console.log(`  ${person.name} (${person.id}) now owes: $${owes[person.id].toFixed(2)} (equal split)`);
+          console.log(`  ${person.name} (${person.id}) now owes: ${currencySymbol}${owes[person.id].toFixed(2)} (equal split)`);
         });
         
         // Also track personal spending for the payer
@@ -163,7 +165,7 @@ export default function SummaryPage() {
               personShares[personId] += 1 / peopleAssigned.length; // Add share for this unit
               
               const personName = people.find(p => p.id === personId)?.name;
-              console.log(`    ${personName} (${personId}) now owes: $${owes[personId].toFixed(2)} (unit split)`);
+              console.log(`    ${personName} (${personId}) now owes: ${currencySymbol}${owes[personId].toFixed(2)} (unit split)`);
             });
             
             continue;
@@ -172,13 +174,13 @@ export default function SummaryPage() {
           // Split this unit's cost equally among its participants
           const costPerPersonForThisUnit = unitPrice / participantsForThisUnit.length;
           
-          console.log(`  Unit ${unitIndex + 1}: $${unitPrice} split among ${participantsForThisUnit.length} people = $${costPerPersonForThisUnit.toFixed(2)} per person`);
+          console.log(`  Unit ${unitIndex + 1}: ${currencySymbol}${unitPrice} split among ${participantsForThisUnit.length} people = ${currencySymbol}${costPerPersonForThisUnit.toFixed(2)} per person`);
           
           participantsForThisUnit.forEach(personId => {
             owes[personId] = (owes[personId] || 0) + costPerPersonForThisUnit;
             
             const personName = people.find(p => p.id === personId)?.name;
-            console.log(`    ${personName} (${personId}) now owes: $${owes[personId].toFixed(2)}`);
+            console.log(`    ${personName} (${personId}) now owes: ${currencySymbol}${owes[personId].toFixed(2)}`);
           });
         }
         
@@ -191,7 +193,7 @@ export default function SummaryPage() {
             itemBreakdowns[personId].push({
               name: item.name,
               amount: totalCost.toFixed(2),
-              details: `${personQty}/${itemQuantity} units`,
+              details: `${personQty}/${itemQuantity} ${translate("units")}`,
               quantity: personQty,
               shared: true
             });
@@ -228,7 +230,7 @@ export default function SummaryPage() {
         // CASE: Regular item or quantity=1 or shared=false
         // Use equal split among assigned people
         const pricePerPerson = totalItemPrice / peopleAssigned.length;
-        console.log(`  Regular item, price per person (equal split): $${pricePerPerson}`);
+        console.log(`  Regular item, price per person (equal split): ${currencySymbol}${pricePerPerson}`);
         
         peopleAssigned.forEach(personId => {
           owes[personId] = (owes[personId] || 0) + pricePerPerson;
@@ -237,13 +239,15 @@ export default function SummaryPage() {
           itemBreakdowns[personId].push({
             name: item.name,
             amount: pricePerPerson.toFixed(2),
-            details: peopleAssigned.length > 1 ? `Split among ${peopleAssigned.length} people` : "Full amount",
+            details: peopleAssigned.length > 1 ? 
+              `${translate("Split among")} ${peopleAssigned.length} ${translate("people")}` : 
+              translate("Full amount"),
             quantity: personItemQuantities[itemIndex]?.[personId] || 1,
             shared: peopleAssigned.length > 1
           });
           
           const personName = people.find(p => p.id === personId)?.name;
-          console.log(`  ${personName} (${personId}) now owes: $${owes[personId].toFixed(2)}`);
+          console.log(`  ${personName} (${personId}) now owes: ${currencySymbol}${owes[personId].toFixed(2)}`);
         });
         
         // Track personal spending for the payer if they're assigned to this item
@@ -256,7 +260,7 @@ export default function SummaryPage() {
     // The person who paid should receive money, not pay
     if (paidBy) {
       owes[paidBy] = 0;
-      console.log(`Payer ${paidBy} reset to $0.00`);
+      console.log(`Payer ${paidBy} reset to ${currencySymbol}0.00`);
     }
     
     // Log final amounts
@@ -290,51 +294,51 @@ export default function SummaryPage() {
         {/* Tabs */}
         <View style={styles.tabsContainer}>
           <TouchableOpacity style={styles.tabButton} onPress={() => router.push('/')}>
-            <Text style={styles.tabText}>Upload Bill</Text>
+            <Text style={styles.tabText}>{translate("Upload Bill")}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.tabButton} onPress={() => router.push('/components/PeoplePage')}>
-            <Text style={styles.tabText}>Add People</Text>
+            <Text style={styles.tabText}>{translate("Add People")}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.tabButton} onPress={() => router.push('/components/ItemsPage')}>
-            <Text style={styles.tabText}>Assign Items</Text>
+            <Text style={styles.tabText}>{translate("Assign Items")}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.tabButton, styles.activeTab]}>
-            <Text style={[styles.tabText, styles.activeTabText]}>Summary</Text>
+            <Text style={[styles.tabText, styles.activeTabText]}>{translate("Summary")}</Text>
           </TouchableOpacity>
         </View>
 
         {/* Title and Subtitle */}
-        <Text style={styles.title}>Step 4: Summary</Text>
-        <Text style={styles.subtitle}>See who owes what to whom</Text>
+        <Text style={styles.title}>{translate("Step 4: Summary")}</Text>
+        <Text style={styles.subtitle}>{translate("See who owes what to whom")}</Text>
 
         {/* Bill Summary */}
         <View style={styles.summaryCard}>
-          <Text style={styles.summaryCardTitle}>Bill Summary</Text>
+          <Text style={styles.summaryCardTitle}>{translate("Bill Summary")}</Text>
           
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Total Bill:</Text>
-            <Text style={styles.summaryValue}>${calculateTotal()}</Text>
+            <Text style={styles.summaryLabel}>{translate("Total Bill:")}</Text>
+            <Text style={styles.summaryValue}>{currencySymbol}{calculateTotal()}</Text>
           </View>
           
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Paid by:</Text>
+            <Text style={styles.summaryLabel}>{translate("Paid by:")}</Text>
             <View style={styles.payerInfo}>
               {paidBy ? (
                 <>
                   <View style={[styles.miniAvatar, { backgroundColor: getPayer()?.color || '#BDBDBD' }]}>
                     <Text style={styles.miniAvatarText}>{getPayer()?.initial || '?'}</Text>
                   </View>
-                  <Text style={styles.summaryValue}>{getPayer()?.name || 'Unknown'}</Text>
+                  <Text style={styles.summaryValue}>{getPayer()?.name || translate("Unknown")}</Text>
                 </>
               ) : (
-                <Text style={styles.summaryValue}>Not specified</Text>
+                <Text style={styles.summaryValue}>{translate("Not specified")}</Text>
               )}
             </View>
           </View>
         </View>
 
         {/* Who Owes What Section */}
-        <Text style={styles.sectionTitle}>Who Owes What</Text>
+        <Text style={styles.sectionTitle}>{translate("Who Owes What")}</Text>
         
         {people.length > 0 ? (
           people.map(person => {
@@ -361,27 +365,27 @@ export default function SummaryPage() {
                     <Text style={styles.personName}>{person.name}</Text>
                     {isPayer && (
                       <View style={styles.payerBadge}>
-                        <Text style={styles.payerBadgeText}>Paid the bill</Text>
+                        <Text style={styles.payerBadgeText}>{translate("Paid the bill")}</Text>
                       </View>
                     )}
                   </View>
                   <View style={styles.amountContainer}>
                     {isPayer ? (
-                      <Text style={styles.payerAmount}>${calculateTotal()}</Text>
+                      <Text style={styles.payerAmount}>{currencySymbol}{calculateTotal()}</Text>
                     ) : (
-                      <Text style={styles.oweAmount}>${amount.toFixed(2)}</Text>
+                      <Text style={styles.oweAmount}>{currencySymbol}{amount.toFixed(2)}</Text>
                     )}
                     {!isPayer && (
-                      <Text style={styles.oweLabel}>to {getPayer()?.name || 'payer'}</Text>
+                      <Text style={styles.oweLabel}>{translate("to")} {getPayer()?.name || translate("payer")}</Text>
                     )}
-                    <Text style={styles.expandToggle}>{isExpanded ? '▲ Hide details' : '▼ Show details'}</Text>
+                    <Text style={styles.expandToggle}>{isExpanded ? translate("Hide details") : translate("Show details")}</Text>
                   </View>
                 </TouchableOpacity>
                 
                 {/* Expandable section with breakdown */}
                 {isExpanded && (
                   <View style={styles.breakdownContainer}>
-                    <Text style={styles.breakdownTitle}>Item Breakdown:</Text>
+                    <Text style={styles.breakdownTitle}>{translate("Item Breakdown:")}</Text>
                     
                     {isPayer ? (
                       <>
@@ -395,38 +399,38 @@ export default function SummaryPage() {
                                   <Text style={styles.breakdownItemDetails}>
                                     {item.shared ? 
                                       `${item.details}` : 
-                                      `${item.quantity} × full amount`}
+                                      `${item.quantity} × ${translate("Full amount")}`}
                                   </Text>
                                 </View>
-                                <Text style={styles.breakdownItemAmount}>${item.amount}</Text>
+                                <Text style={styles.breakdownItemAmount}>{currencySymbol}{item.amount}</Text>
                               </View>
                             ))}
                             
                             <View style={styles.breakdownSection}>
                               <View style={styles.breakdownTotal}>
-                                <Text style={styles.breakdownTotalText}>Your consumption</Text>
-                                <Text style={styles.breakdownTotalAmount}>${personalAmount.toFixed(2)}</Text>
+                                <Text style={styles.breakdownTotalText}>{translate("Your consumption")}</Text>
+                                <Text style={styles.breakdownTotalAmount}>{currencySymbol}{personalAmount.toFixed(2)}</Text>
                               </View>
                               
                               <View style={styles.breakdownTotal}>
-                                <Text style={styles.breakdownTotalText}>Others owe you</Text>
-                                <Text style={styles.payerRefundAmount}>${getPayerRefund()}</Text>
+                                <Text style={styles.breakdownTotalText}>{translate("Others owe you")}</Text>
+                                <Text style={styles.payerRefundAmount}>{currencySymbol}{getPayerRefund()}</Text>
                               </View>
                               
                               <View style={[styles.breakdownTotal, styles.finalTotal]}>
-                                <Text style={styles.finalTotalText}>Total paid</Text>
-                                <Text style={styles.payerTotalAmount}>${calculateTotal()}</Text>
+                                <Text style={styles.finalTotalText}>{translate("Total paid")}</Text>
+                                <Text style={styles.payerTotalAmount}>{currencySymbol}{calculateTotal()}</Text>
                               </View>
                             </View>
                           </>
                         ) : (
                           <>
                             <Text style={styles.payerBreakdownText}>
-                              You paid the total bill amount and should collect from others.
+                              {translate("You paid the total bill amount and should collect from others.")}
                             </Text>
                             <View style={styles.breakdownTotal}>
-                              <Text style={styles.breakdownTotalText}>Total Paid</Text>
-                              <Text style={styles.payerTotalAmount}>${calculateTotal()}</Text>
+                              <Text style={styles.breakdownTotalText}>{translate("Total Paid")}</Text>
+                              <Text style={styles.payerTotalAmount}>{currencySymbol}{calculateTotal()}</Text>
                             </View>
                           </>
                         )}
@@ -440,20 +444,20 @@ export default function SummaryPage() {
                               <Text style={styles.breakdownItemDetails}>
                                 {item.shared ? 
                                   `${item.details}` : 
-                                  `${item.quantity} × full amount`}
+                                  `${item.quantity} × ${translate("Full amount")}`}
                               </Text>
                             </View>
-                            <Text style={styles.breakdownItemAmount}>${item.amount}</Text>
+                            <Text style={styles.breakdownItemAmount}>{currencySymbol}{item.amount}</Text>
                           </View>
                         ))}
                         
                         <View style={styles.breakdownTotal}>
-                          <Text style={styles.breakdownTotalText}>Total</Text>
-                          <Text style={styles.breakdownTotalAmount}>${amount.toFixed(2)}</Text>
+                          <Text style={styles.breakdownTotalText}>{translate("Total")}</Text>
+                          <Text style={styles.breakdownTotalAmount}>{currencySymbol}{amount.toFixed(2)}</Text>
                         </View>
                       </>
                     ) : (
-                      <Text style={styles.noItemsText}>No items assigned</Text>
+                      <Text style={styles.noItemsText}>{translate("No items assigned")}</Text>
                     )}
                   </View>
                 )}
@@ -463,28 +467,28 @@ export default function SummaryPage() {
         ) : (
           <View style={styles.emptyState}>
             <Text style={styles.emptyStateText}>
-              No people added yet. Go back to add people who participated in the bill.
+              {translate("No people added yet. Go back to add people who participated in the bill.")}
             </Text>
           </View>
         )}
 
         {/* Instructions Box */}
         <View style={styles.instructionsBox}>
-          <Text style={styles.instructionsTitle}>All done!</Text>
+          <Text style={styles.instructionsTitle}>{translate("All done!")}</Text>
           <Text style={styles.instructionsText}>
-            Everyone can now settle up with the person who paid the bill.
+            {translate("Everyone can now settle up with the person who paid the bill.")}
             {'\n\n'}
-            Items with no specific assignments were split equally among all participants.
+            {translate("Items with no specific assignments were split equally among all participants.")}
           </Text>
         </View>
 
         {/* Navigation Buttons */}
         <View style={styles.navigationContainer}>
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <Text style={styles.backButtonText}>← Back</Text>
+            <Text style={styles.backButtonText}>{translate("Back")}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.doneButton} onPress={() => router.push('/')}>
-            <Text style={styles.doneButtonText}>Done</Text>
+            <Text style={styles.doneButtonText}>{translate("Done")}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

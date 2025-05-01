@@ -14,7 +14,9 @@ export default function PeoplePage() {
     paidBy, setPaidBy,
     items, setItems,
     assignments, setAssignments,
-    personItemQuantities, setPersonItemQuantities
+    personItemQuantities, setPersonItemQuantities,
+    translate, // Get translation function
+    currencySymbol // Get currency symbol
   } = useAppContext();
   
   const [personName, setPersonName] = React.useState('');
@@ -128,34 +130,34 @@ export default function PeoplePage() {
         {/* Tabs */}
         <View style={styles.tabsContainer}>
           <TouchableOpacity style={styles.tabButton} onPress={() => router.push('/')}>
-            <Text style={styles.tabText}>Upload Bill</Text>
+            <Text style={styles.tabText}>{translate("Upload Bill")}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.tabButton, styles.activeTab]}>
-            <Text style={[styles.tabText, styles.activeTabText]}>Add People</Text>
+            <Text style={[styles.tabText, styles.activeTabText]}>{translate("Add People")}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.tabButton} onPress={() => router.push('/components/ItemsPage')}>
-            <Text style={styles.tabText}>Assign Items</Text>
+            <Text style={styles.tabText}>{translate("Assign Items")}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.tabButton} onPress={() => router.push('/components/SummaryPage')}>
-            <Text style={styles.tabText}>Summary</Text>
+            <Text style={styles.tabText}>{translate("Summary")}</Text>
           </TouchableOpacity>
         </View>
 
         {/* Title and Subtitle */}
-        <Text style={styles.title}>Step 2: Add People to Split With</Text>
-        <Text style={styles.subtitle}>Add everyone who's splitting the bill</Text>
+        <Text style={styles.title}>{translate("Step 2: Add People to Split With")}</Text>
+        <Text style={styles.subtitle}>{translate("Add everyone who's splitting the bill")}</Text>
 
         {/* Add Person Input (moved to the top since there are no initial people) */}
         <View style={styles.addPersonContainer}>
           <TextInput
             style={styles.input}
-            placeholder="Add person's name"
+            placeholder={translate("Add person's name")}
             value={personName}
             onChangeText={setPersonName}
             onSubmitEditing={addPerson}
           />
           <TouchableOpacity style={styles.addButton} onPress={addPerson}>
-            <Text style={styles.addButtonText}>+ Add</Text>
+            <Text style={styles.addButtonText}>+ {translate("Add")}</Text>
           </TouchableOpacity>
         </View>
 
@@ -170,7 +172,7 @@ export default function PeoplePage() {
                 <Text style={styles.personName}>{person.name}</Text>
                 {person.paidBill && (
                   <View style={styles.paidBadge}>
-                    <Text style={styles.paidBadgeText}>Paid the bill</Text>
+                    <Text style={styles.paidBadgeText}>{translate("Paid the bill")}</Text>
                   </View>
                 )}
               </View>
@@ -182,7 +184,7 @@ export default function PeoplePage() {
         ) : (
           <View style={styles.emptyState}>
             <Text style={styles.emptyStateText}>
-              Add people who are splitting the bill
+              {translate("Add people who are splitting the bill")}
             </Text>
           </View>
         )}
@@ -190,7 +192,7 @@ export default function PeoplePage() {
         {/* Who Paid the Bill Section - only shown if there are people */}
         {people.length > 0 && (
           <>
-            <Text style={styles.sectionTitle}>Who Paid the Bill?</Text>
+            <Text style={styles.sectionTitle}>{translate("Who Paid the Bill?")}</Text>
             <View style={styles.payerContainer}>
               {people.map((person) => (
                 <TouchableOpacity
@@ -215,16 +217,16 @@ export default function PeoplePage() {
 
         {/* Next Step Instructions */}
         <View style={styles.instructionsBox}>
-          <Text style={styles.instructionsTitle}>Next step:</Text>
+          <Text style={styles.instructionsTitle}>{translate("Next step:")}</Text>
           <Text style={styles.instructionsText}>
-            After adding everyone, you'll assign bill items to each person in the next step.
+            {translate("After adding everyone, you'll assign bill items to each person in the next step.")}
           </Text>
         </View>
 
         {/* Navigation Buttons */}
         <View style={styles.navigationContainer}>
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <Text style={styles.backButtonText}>← Back</Text>
+            <Text style={styles.backButtonText}>{translate("← Back")}</Text>
           </TouchableOpacity>
           <TouchableOpacity 
             style={[styles.nextButton, people.length === 0 && styles.disabledButton]}
@@ -235,7 +237,7 @@ export default function PeoplePage() {
               }
             }}
           >
-            <Text style={styles.nextButtonText}>Next →</Text>
+            <Text style={styles.nextButtonText}>{translate("Next →")}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
