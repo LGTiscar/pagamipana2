@@ -25,13 +25,13 @@ export default class ReceiptProcessor {
     this.apiKey = process.env.EXPO_PUBLIC_API_KEY;
     // Updated logging
     console.log('API Key loaded via process.env.EXPO_PUBLIC_API_KEY:', this.apiKey ? `Yes (length: ${this.apiKey.length})` : 'No/Undefined');
-    if (!this.apiKey || typeof this.apiKey !== 'string') {
+    if (!this.apiKey) {
       console.warn("API Key not found or not a string in process.env.EXPO_PUBLIC_API_KEY. Check your .env file (must start with EXPO_PUBLIC_).");
     }
   }
 
   async processReceipt(imageBytes) {
-    if (!this.apiKey || typeof this.apiKey !== 'string') {
+    if (!this.apiKey) {
       const errorMsg = "API Key is not configured correctly. Please check setup.";
       console.error("Cannot process receipt: " + errorMsg);
       throw new Error(errorMsg);
@@ -167,13 +167,13 @@ IMPORTANT: Your response must ONLY contain this JSON object and nothing else.
       console.error(errorMsg, response.data);
       throw new Error(errorMsg);
     } catch (e) {
-      // Enhanced error logging with fucking details as requested
+      // Enhanced error logging with details as requested
       console.error('Error processing receipt:', e);
       
       // Check for specific axios error properties
       if (e.response) {
         // The request was made and the server responded with a status code outside of 2xx
-        console.error('FUCKING ERROR - Gemini API error response:', {
+        console.error('ERROR - Gemini API error response:', {
           status: e.response.status,
           statusText: e.response.statusText,
           data: JSON.stringify(e.response.data, null, 2)
@@ -186,10 +186,10 @@ IMPORTANT: Your response must ONLY contain this JSON object and nothing else.
           const apiError = e.response.data.error;
           errorDetails = `${apiError.message || ''} (Code: ${apiError.code || 'unknown'}) ${apiError.status || ''}`;
           // Log the full error object for debugging
-          console.error('FUCKING GEMINI API ERROR DETAILS:', JSON.stringify(apiError, null, 2));
+          console.error('GEMINI API ERROR DETAILS:', JSON.stringify(apiError, null, 2));
         } else {
           errorDetails = `Status: ${e.response.status} - ${e.response.statusText || 'Unknown error'}`;
-          console.error('FUCKING RAW ERROR RESPONSE:', JSON.stringify(e.response.data, null, 2));
+          console.error('RAW ERROR RESPONSE:', JSON.stringify(e.response.data, null, 2));
         }
         
         // Create a custom error object with apiErrorDetails property
@@ -198,13 +198,13 @@ IMPORTANT: Your response must ONLY contain this JSON object and nothing else.
         throw error;
       } else if (e.request) {
         // The request was made but no response was received
-        console.error('FUCKING NETWORK ERROR - No response received from Gemini API:', e.request);
+        console.error('NETWORK ERROR - No response received from Gemini API:', e.request);
         const error = new Error(`No response from Gemini API: Network error or timeout`);
         error.apiErrorDetails = 'Network error or timeout - server did not respond';
         throw error;
       } else {
         // Something happened in setting up the request
-        console.error('FUCKING REQUEST SETUP ERROR:', e.message);
+        console.error('REQUEST SETUP ERROR:', e.message);
         const error = new Error(`Error processing receipt: ${e.message}`);
         error.apiErrorDetails = e.message;
         throw error;
