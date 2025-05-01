@@ -148,18 +148,9 @@ export default function ItemsPage() {
   };
 
   const isAllItemsAssigned = () => {
-    // Check if every item has at least one person assigned
-    return items.length > 0 && items.every((item, index) => {
-      // Check if there's a direct assignment in the assignments object
-      const hasDirectAssignments = assignments[index] && assignments[index].length > 0;
-      
-      // Also check if any person has a quantity > 0 for this item
-      const hasQuantityAssignments = Boolean(personItemQuantities[index] && 
-        Object.values(personItemQuantities[index]).some(qty => qty > 0));
-      
-      // Return true if either condition is met
-      return hasDirectAssignments || hasQuantityAssignments;
-    });
+    // We no longer require all items to be assigned
+    // Instead, if an item has no assignments, it will be shared equally by default
+    return items.length > 0; // Just check that we have items to split
   };
 
   // Helper function to calculate the sum of quantities for an item
@@ -385,7 +376,15 @@ export default function ItemsPage() {
 
         {/* Show the person assignment section regardless of shared status */}
         <View style={styles.assignmentSection}>
-          <Text style={styles.assignLabel}>Who participated in this item?</Text>
+          <View style={styles.assignLabelContainer}>
+            <Text style={styles.assignLabel}>Who participated in this item?</Text>
+            {(assignments[index]?.length === 0 || !assignments[index]) && (
+              <Text style={styles.unassignedNote}>
+                (If no one is selected, this will be split equally among everyone)
+              </Text>
+            )}
+          </View>
+          
           <View style={styles.personAssignments}>
             {people.map(person => {
               // Get the person's quantity for this item
@@ -526,7 +525,8 @@ export default function ItemsPage() {
         <View style={styles.instructionsBox}>
           <Text style={styles.instructionsTitle}>Next step:</Text>
           <Text style={styles.instructionsText}>
-            After assigning all items, you'll see the summary of what each person owes.
+            After assigning items, you'll see the summary of what each person owes. 
+            Items without assignments will be split equally among everyone.
           </Text>
         </View>
 
@@ -938,5 +938,14 @@ const styles = StyleSheet.create({
   remainingNegative: {
     color: '#FF9800', // Orange color for over-assigned warning
     fontWeight: 'bold',
+  },
+  assignLabelContainer: {
+    marginBottom: 8,
+  },
+  unassignedNote: {
+    fontSize: 12,
+    color: '#757575',
+    fontStyle: 'italic',
+    marginTop: 2,
   },
 });

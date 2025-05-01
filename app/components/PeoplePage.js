@@ -12,7 +12,9 @@ export default function PeoplePage() {
   const { 
     people, setPeople, 
     paidBy, setPaidBy,
-    items, setItems 
+    items, setItems,
+    assignments, setAssignments,
+    personItemQuantities, setPersonItemQuantities
   } = useAppContext();
   
   const [personName, setPersonName] = React.useState('');
@@ -70,6 +72,39 @@ export default function PeoplePage() {
         setPaidBy(null);
       }
     }
+    
+    // Clear assignments for removed person
+    setAssignments(prevAssignments => {
+      const newAssignments = { ...prevAssignments };
+      
+      // Loop through each item's assignments
+      Object.keys(newAssignments).forEach(itemIndex => {
+        // Filter out the removed person from each item's assignment array
+        if (Array.isArray(newAssignments[itemIndex])) {
+          newAssignments[itemIndex] = newAssignments[itemIndex].filter(
+            personId => personId !== id
+          );
+        }
+      });
+      
+      return newAssignments;
+    });
+    
+    // Clear quantities for removed person
+    setPersonItemQuantities(prevQuantities => {
+      const newQuantities = { ...prevQuantities };
+      
+      // Loop through each item's quantities
+      Object.keys(newQuantities).forEach(itemIndex => {
+        // If this item has quantities and the removed person had assignments
+        if (newQuantities[itemIndex] && newQuantities[itemIndex][id]) {
+          // Delete this person's quantity entry
+          delete newQuantities[itemIndex][id];
+        }
+      });
+      
+      return newQuantities;
+    });
   };
 
   const handlePaidBySelection = (id) => {

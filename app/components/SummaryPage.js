@@ -81,10 +81,18 @@ export default function SummaryPage() {
       
       console.log(`Item ${index}: ${item.name} - Unit Price: $${unitPrice} x ${itemQuantity} units = $${totalItemPrice} - Assigned to ${peopleAssigned.length} people - Shared: ${isShared}`);
       
-      // Skip if no one is assigned to this item
+      // If no one is assigned to this item, split equally among all people
       if (peopleAssigned.length === 0) {
-        console.log(`  WARNING: No one assigned to ${item.name} ($${totalItemPrice})`);
-        return;
+        console.log(`  No specific assignment for ${item.name} - splitting equally among all ${people.length} people`);
+        
+        const pricePerPerson = totalItemPrice / people.length;
+        
+        people.forEach(person => {
+          owes[person.id] = (owes[person.id] || 0) + pricePerPerson;
+          console.log(`  ${person.name} (${person.id}) now owes: $${owes[person.id].toFixed(2)} (equal split)`);
+        });
+        
+        return; // Skip the rest of the processing for this item
       }
       
       // Different splitting logic based on shared status and quantity
@@ -105,9 +113,18 @@ export default function SummaryPage() {
             }
           });
           
-          // Skip if no one participated in this unit (shouldn't happen but just in case)
+          // If no one participated in this unit, split it equally among all assigned people
           if (participantsForThisUnit.length === 0) {
-            console.log(`  WARNING: No one participated in unit ${unitIndex + 1} of ${item.name}`);
+            console.log(`  No specific assignments for unit ${unitIndex + 1} of ${item.name} - splitting among all assigned people`);
+            
+            const costPerPersonForThisUnit = unitPrice / peopleAssigned.length;
+            
+            peopleAssigned.forEach(personId => {
+              owes[personId] = (owes[personId] || 0) + costPerPersonForThisUnit;
+              const personName = people.find(p => p.id === personId)?.name;
+              console.log(`    ${personName} (${personId}) now owes: $${owes[personId].toFixed(2)} (unit split)`);
+            });
+            
             continue;
           }
           
@@ -244,6 +261,8 @@ export default function SummaryPage() {
           <Text style={styles.instructionsTitle}>All done!</Text>
           <Text style={styles.instructionsText}>
             Everyone can now settle up with the person who paid the bill.
+            {'\n\n'}
+            Items with no specific assignments were split equally among all participants.
           </Text>
         </View>
 
