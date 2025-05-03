@@ -20,6 +20,7 @@ export default function PeoplePage() {
   } = useAppContext();
   
   const [personName, setPersonName] = React.useState('');
+  const inputRef = React.useRef(null);
   
   // Parse items from params only once when the component mounts and if context is empty
   React.useEffect(() => {
@@ -34,7 +35,7 @@ export default function PeoplePage() {
     }
   }, []);
   
-  const addPerson = () => {
+  const addPerson = React.useCallback(() => {
     if (personName.trim()) {
       // Generate a random color
       const colors = ['#F44336', '#E91E63', '#9C27B0', '#673AB7', '#3F51B5', '#2196F3', 
@@ -59,7 +60,16 @@ export default function PeoplePage() {
       }
       
       setPersonName('');
+      // Mantener el foco en el input tras añadir (con setTimeout para asegurar re-render)
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 0);
     }
+  }, [personName, people]);
+
+  // Asegura que onSubmitEditing pase el evento correctamente
+  const handleSubmitEditing = (e) => {
+    addPerson();
   };
 
   const removePerson = (id) => {
@@ -150,11 +160,14 @@ export default function PeoplePage() {
         {/* Add Person Input (moved to the top since there are no initial people) */}
         <View style={styles.addPersonContainer}>
           <TextInput
+            ref={inputRef}
             style={styles.input}
             placeholder={translate("Add person's name")}
             value={personName}
             onChangeText={setPersonName}
-            onSubmitEditing={addPerson}
+            onSubmitEditing={handleSubmitEditing}
+            returnKeyType="done"
+            blurOnSubmit={false}
           />
           <TouchableOpacity style={styles.addButton} onPress={addPerson}>
             <Text style={styles.addButtonText}>+ {translate("Add")}</Text>
