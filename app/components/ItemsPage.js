@@ -540,7 +540,7 @@ export default function ItemsPage() {
         {/* Navigation Buttons */}
         <View style={styles.navigationContainer}>
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <Text style={styles.backButtonText}>{translate("← Back")}</Text>
+            <Text style={styles.backButtonText}>{translate("Back")}</Text>
           </TouchableOpacity>
           <TouchableOpacity 
             style={[styles.nextButton, !isAllItemsAssigned() && styles.disabledButton]} 
@@ -551,7 +551,7 @@ export default function ItemsPage() {
               }
             }}
           >
-            <Text style={styles.nextButtonText}>{translate("Next →")}</Text>
+            <Text style={styles.nextButtonText}>{translate("Next")}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
