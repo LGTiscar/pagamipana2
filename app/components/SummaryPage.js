@@ -129,103 +129,39 @@ export default function SummaryPage() {
         return; // Skip the rest of the processing for this item
       }
       
-      // Different splitting logic based on shared status and quantity
+      // Lógica de clasificación para Shared ON y quantity > 1
       if (isShared && itemQuantity > 1 && personItemQuantities[itemIndex]) {
-        // CASE: Shared item with quantity > 1
-        // In this case, we handle each unit of the item separately
-        
-        // Create a map to track how much of each item a person is responsible for
-        const personShares = {};
-        peopleAssigned.forEach(personId => {
-          personShares[personId] = 0;
-        });
-        
-        // Loop through each unit of the item
-        for (let unitIndex = 0; unitIndex < itemQuantity; unitIndex++) {
-          // For each unit, find who participated in it
-          const participantsForThisUnit = [];
-          
-          peopleAssigned.forEach(personId => {
-            const personParticipationCount = personItemQuantities[itemIndex]?.[personId] || 0;
-            // If person participated in at least this many units, include them for this unit
-            if (personParticipationCount > unitIndex) {
-              participantsForThisUnit.push(personId);
-              personShares[personId] += 1 / participantsForThisUnit.length; // Add share for this unit
-            }
-          });
-          
-          // If no one participated in this unit, split it equally among all assigned people
-          if (participantsForThisUnit.length === 0) {
-            console.log(`  No specific assignments for unit ${unitIndex + 1} of ${item.name} - splitting among all assigned people`);
-            
-            const costPerPersonForThisUnit = unitPrice / peopleAssigned.length;
-            
-            peopleAssigned.forEach(personId => {
-              owes[personId] = (owes[personId] || 0) + costPerPersonForThisUnit;
-              personShares[personId] += 1 / peopleAssigned.length; // Add share for this unit
-              
-              const personName = people.find(p => p.id === personId)?.name;
-              console.log(`    ${personName} (${personId}) now owes: ${currencySymbol}${owes[personId].toFixed(2)} (unit split)`);
-            });
-            
-            continue;
-          }
-          
-          // Split this unit's cost equally among its participants
-          const costPerPersonForThisUnit = unitPrice / participantsForThisUnit.length;
-          
-          console.log(`  Unit ${unitIndex + 1}: ${currencySymbol}${unitPrice} split among ${participantsForThisUnit.length} people = ${currencySymbol}${costPerPersonForThisUnit.toFixed(2)} per person`);
-          
-          participantsForThisUnit.forEach(personId => {
-            owes[personId] = (owes[personId] || 0) + costPerPersonForThisUnit;
-            
-            const personName = people.find(p => p.id === personId)?.name;
-            console.log(`    ${personName} (${personId}) now owes: ${currencySymbol}${owes[personId].toFixed(2)}`);
+        // Para cada unidad, ver quién la "reclama" (contador >= unidad)
+        let personShares = {};
+        peopleAssigned.forEach(pid => { personShares[pid] = 0; });
+        for (let unit = 1; unit <= itemQuantity; unit++) {
+          // Participan los que tengan contador >= unidad
+          const participants = peopleAssigned.filter(pid => (personItemQuantities[itemIndex]?.[pid] || 0) >= unit);
+          if (participants.length === 0) continue; // Si nadie, saltar
+          const share = unitPrice / participants.length;
+          participants.forEach(pid => {
+            owes[pid] = (owes[pid] || 0) + share;
+            personShares[pid] += share;
           });
         }
-        
-        // Add to item breakdown for each person
-        peopleAssigned.forEach(personId => {
-          const personQty = personItemQuantities[itemIndex]?.[personId] || 0;
-          const totalCost = personShares[personId] * unitPrice;
-          
+        // Breakdown por persona
+        peopleAssigned.forEach(pid => {
+          const qty = personItemQuantities[itemIndex]?.[pid] || 0;
+          const totalCost = personShares[pid];
           if (totalCost > 0) {
-            itemBreakdowns[personId].push({
+            itemBreakdowns[pid].push({
               name: item.name,
               amount: totalCost.toFixed(2),
-              details: `${personQty}/${itemQuantity} ${translate("units")}`,
-              quantity: personQty,
+              details: `${qty}/${itemQuantity} ${translate("units")}`,
+              quantity: qty,
               shared: true
             });
           }
         });
-        
-        // Track personal spending for the payer if they're assigned to this item
+        // Payer breakdown
         if (paidBy && peopleAssigned.includes(paidBy)) {
-          const payerQty = personItemQuantities[itemIndex]?.[paidBy] || 0;
-          if (payerQty > 0) {
-            // Calculate payer's portion based on their participation in each unit
-            let payerCost = 0;
-            // For each unit the payer participated in, add their share
-            for (let unitIndex = 0; unitIndex < Math.min(payerQty, itemQuantity); unitIndex++) {
-              // Find participants for this unit
-              const participantsForThisUnit = [];
-              peopleAssigned.forEach(personId => {
-                const personParticipationCount = personItemQuantities[itemIndex]?.[personId] || 0;
-                if (personParticipationCount > unitIndex) {
-                  participantsForThisUnit.push(personId);
-                }
-              });
-              
-              // Add payer's share for this unit
-              if (participantsForThisUnit.length > 0) {
-                payerCost += unitPrice / participantsForThisUnit.length;
-              }
-            }
-            personalSpending[paidBy] += payerCost;
-          }
+          personalSpending[paidBy] += personShares[paidBy] || 0;
         }
-        
       } else {
         // CASE: Regular item or quantity=1 or shared=false
         // Use equal split among assigned people
