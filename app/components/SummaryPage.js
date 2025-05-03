@@ -162,6 +162,25 @@ export default function SummaryPage() {
         if (paidBy && peopleAssigned.includes(paidBy)) {
           personalSpending[paidBy] += personShares[paidBy] || 0;
         }
+      } else if (!isShared && itemQuantity > 1 && personItemQuantities[itemIndex]) {
+        // NUEVA LÓGICA: Shared OFF y quantity > 1
+        peopleAssigned.forEach(personId => {
+          const qty = personItemQuantities[itemIndex]?.[personId] || 0;
+          const totalCost = qty * unitPrice;
+          if (qty > 0) {
+            owes[personId] = (owes[personId] || 0) + totalCost;
+            itemBreakdowns[personId].push({
+              name: item.name,
+              amount: totalCost.toFixed(2),
+              details: `${qty} × ${translate("unit price")}`,
+              quantity: qty,
+              shared: false
+            });
+            if (paidBy && personId === paidBy) {
+              personalSpending[paidBy] += totalCost;
+            }
+          }
+        });
       } else {
         // CASE: Regular item or quantity=1 or shared=false
         // Use equal split among assigned people
