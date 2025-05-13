@@ -27,17 +27,23 @@ export default class ReceiptProcessor {
 
   async processReceipt(imageBytes) {
     try {
-      // Convert image to base64
-      const base64Image = Buffer.from(imageBytes).toString('base64');
-
       console.log('Making request to OCR backend API...');
       
-      // Send just the base64 image to the backend
-      const response = await axios.post(this.apiUrl, {
-        image: base64Image
-      }, {
+      // Create a FormData object
+      const formData = new FormData();
+      
+      // En React Native, podemos añadir el archivo directamente sin necesidad de crear un Blob
+      // Creamos un objeto tipo archivo con los datos necesarios
+      formData.append('file', {
+        uri: 'data:image/jpeg;base64,' + Buffer.from(imageBytes).toString('base64'),
+        type: 'image/jpeg',
+        name: 'receipt.jpg',
+      });
+      
+      // Send the formData with the image file to the backend
+      const response = await axios.post(this.apiUrl, formData, {
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'multipart/form-data',
         },
       });
 
