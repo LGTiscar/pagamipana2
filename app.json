@@ -2,7 +2,7 @@
   "expo": {
     "name": "Pagamipana",
     "slug": "pagamipana",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "pagamipana",
@@ -19,6 +19,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.example.pagamipana",
+      "buildNumber": "2",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -28,7 +29,8 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.example.pagamipana"
+      "package": "com.example.pagamipana",
+      "versionCode": 2
     },
     "web": {
       "bundler": "metro",
