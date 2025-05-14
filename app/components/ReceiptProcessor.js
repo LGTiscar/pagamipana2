@@ -22,7 +22,7 @@ class BillItem {
 export default class ReceiptProcessor {
   constructor() {
     // No longer need to store the API key as we're using the backend
-    this.apiUrl = 'http://0.0.0.0:8000/api/ocr/generate';
+    this.apiUrl = 'https://pagamipana-backend.vercel.app/api/ocr/generate';
   }
 
   async processReceipt(imageBytes) {
@@ -52,8 +52,40 @@ export default class ReceiptProcessor {
 
       if (response.status === 200) {
         // Extract JSON from Gemini response
-        const jsonData = response.data;
+        const geminiResponse = response.data;
         
+        // Check if we have the expected Gemini response structure
+        if (!geminiResponse.candidates || 
+            !geminiResponse.candidates[0] || 
+            !geminiResponse.candidates[0].content || 
+            !geminiResponse.candidates[0].content.parts || 
+            !geminiResponse.candidates[0].content.parts[0] || 
+            !geminiResponse.candidates[0].content.parts[0].text) {
+          const errorMsg = 'Invalid response format from backend';
+          console.error(errorMsg, JSON.stringify(geminiResponse));
+          throw new Error(errorMsg);
+        }
+        
+        // Extract the text containing the JSON
+        const jsonText = geminiResponse.candidates[0].content.parts[0].text;
+        
+        // Parse the JSON from the text (removes markdown code blocks if present)
+        let jsonData;
+        try {
+          // First, try to extract JSON from markdown code block if present
+          const jsonMatch = jsonText.match(/```(?:json)?\s*\n([\s\S]*?)\n```/);
+          if (jsonMatch && jsonMatch[1]) {
+            jsonData = JSON.parse(jsonMatch[1]);
+          } else {
+            // If no code block, try parsing the entire text
+            jsonData = JSON.parse(jsonText);
+          }
+        } catch (parseError) {
+          const errorMsg = 'Failed to parse JSON from Gemini response';
+          console.error(errorMsg, jsonText, parseError);
+          throw new Error(`${errorMsg}: ${parseError.message}`);
+        }
+
         // The backend should return the parsed items directly
         if (!jsonData.items || !jsonData.total) {
           const errorMsg = 'Backend response is missing required keys: items or total';
