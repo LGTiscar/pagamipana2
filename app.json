@@ -19,7 +19,6 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.example.pagamipana",
-      "buildNumber": "2",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -30,7 +29,6 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.example.pagamipana",
-      "versionCode": 2
     },
     "web": {
       "bundler": "metro",
