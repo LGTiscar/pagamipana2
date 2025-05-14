@@ -22,7 +22,7 @@ class BillItem {
 export default class ReceiptProcessor {
   constructor() {
     // No longer need to store the API key as we're using the backend
-    this.apiUrl = 'http://0.0.0.0:8000/api/ocr/generate';
+    this.apiUrl = 'pagamipana-backend.vercel.app/api/ocr/generate';
   }
 
   async processReceipt(imageBytes) {
