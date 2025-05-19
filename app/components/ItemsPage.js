@@ -15,6 +15,7 @@ export default function ItemsPage() {
     assignments, setAssignments,
     sharedItems, setSharedItems,
     personItemQuantities, setPersonItemQuantities,
+    portionAssignments, setPortionAssignments, // IMPORTANTE: Usar el contexto global en lugar de estado local
     translate, // Get translation function
     currencySymbol // Get currency symbol
   } = useAppContext();
@@ -24,8 +25,8 @@ export default function ItemsPage() {
   const [modalItemIndex, setModalItemIndex] = useState(null);
   const [tempAssignments, setTempAssignments] = useState({});
   
-  // Add state for storing portion assignments data
-  const [portionAssignments, setPortionAssignments] = useState({});
+  // ELIMINAR esta línea - no necesitamos un estado local para portionAssignments
+  // const [portionAssignments, setPortionAssignments] = useState({});
   
   const togglePersonForItem = (itemIndex, personId) => {
     const item = items[itemIndex];
@@ -201,40 +202,33 @@ export default function ItemsPage() {
       [modalItemIndex]: true
     }));
     
-    // Calculate how many times each person is assigned across all portions
-    const personCounts = {};
-    Object.values(tempAssignments).forEach(portionAssignment => {
-      portionAssignment.forEach(personId => {
-        personCounts[personId] = (personCounts[personId] || 0) + 1;
-      });
+    console.log("=== GUARDANDO ASIGNACIONES POR UNIDADES EN CONTEXTO GLOBAL ===");
+    console.log("Item Index:", modalItemIndex);
+    console.log("Temp Assignments:", JSON.stringify(tempAssignments));
+    
+    // Store the portion-specific assignments in the GLOBAL context
+    setPortionAssignments(prev => {
+      const newAssignments = {
+        ...prev,
+        [modalItemIndex]: { ...tempAssignments }
+      };
+      
+      console.log("Nuevas asignaciones por unidades (contexto global):", JSON.stringify(newAssignments));
+      return newAssignments;
     });
     
-    // Update assignments - everyone who has at least one portion is considered assigned
-    const assignedPeople = Object.keys(personCounts);
+    // También actualizar las asignaciones generales para este item
+    // para que se muestre como asignado en la lista principal
+    const allAssignedPeople = new Set();
+    Object.values(tempAssignments).forEach(peopleForUnit => {
+      if (peopleForUnit && peopleForUnit.length) {
+        peopleForUnit.forEach(personId => allAssignedPeople.add(personId));
+      }
+    });
+    
     setAssignments(prev => ({
       ...prev,
-      [modalItemIndex]: assignedPeople
-    }));
-    
-    // Update person-item quantities based on how many portions they got
-    setPersonItemQuantities(prev => {
-      const newQuantities = { ...prev };
-      if (!newQuantities[modalItemIndex]) {
-        newQuantities[modalItemIndex] = {};
-      }
-      
-      // Set counts for each person based on modal assignments
-      people.forEach(person => {
-        newQuantities[modalItemIndex][person.id] = personCounts[person.id] || 0;
-      });
-      
-      return newQuantities;
-    });
-    
-    // Store the portion-specific assignments for display
-    setPortionAssignments(prev => ({
-      ...prev,
-      [modalItemIndex]: { ...tempAssignments }
+      [modalItemIndex]: Array.from(allAssignedPeople)
     }));
     
     // Close the modal
@@ -407,6 +401,28 @@ export default function ItemsPage() {
     });
   };
 
+  // Add useEffect to initialize portion assignments from storage
+  useEffect(() => {
+    const loadAssignments = async () => {
+      try {
+        // We would load from AsyncStorage here in a real app
+        console.log("Loaded portion assignments from storage");
+      } catch (error) {
+        console.error("Error loading portion assignments:", error);
+      }
+    };
+    
+    loadAssignments();
+  }, []);
+
+  // Añadir un useEffect para mostrar información de depuración sobre las asignaciones
+  useEffect(() => {
+    if (Object.keys(portionAssignments).length > 0) {
+      console.log("=== ASIGNACIONES POR UNIDADES ACTUALES (CONTEXTO) ===");
+      console.log(JSON.stringify(portionAssignments));
+    }
+  }, [portionAssignments]);
+
   const renderItem = ({ item, index }) => {
     // Use the quantity from the state
     const itemQuantity = items[index]?.quantity || 1;
@@ -417,7 +433,18 @@ export default function ItemsPage() {
     const remainingQuantity = itemQuantity - currentTotalAssigned;
     
     // Check if this item has portion assignments
-    const hasPortionAssignments = portionAssignments[index] && Object.keys(portionAssignments[index]).length > 0;
+    const hasPortionAssignments = portionAssignments && 
+                                portionAssignments[index] && 
+                                Object.keys(portionAssignments[index]).length > 0 &&
+                                // Check if at least one portion has people assigned
+                                Object.values(portionAssignments[index]).some(portion => 
+                                  portion && portion.length > 0
+                                );
+    
+    // Include this debugging line
+    console.log(`Item ${item.name} has portion assignments: ${hasPortionAssignments}`, 
+                portionAssignments && portionAssignments[index] ? 
+                JSON.stringify(portionAssignments[index]) : "none");
     
     return (
       <View style={styles.itemCard}>

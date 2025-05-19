@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
 // Spanish translations
 export const spanishTranslations = {
@@ -122,6 +122,7 @@ export const AppProvider = ({ children }) => {
   const [sharedItems, setSharedItems] = useState({});
   const [personItemQuantities, setPersonItemQuantities] = useState({});
   const [uploadedImagePath, setUploadedImagePath] = useState(null);
+  const [portionAssignments, setPortionAssignments] = useState({}); // Asegúrate de que esto está definido
   
   // Add language and currency settings
   const [language, setLanguage] = useState('es'); // Default to Spanish
@@ -138,6 +139,11 @@ export const AppProvider = ({ children }) => {
     if (language === 'en') return text; // English is the base language
     return translations[language][text] || text; // Fall back to the original text if no translation
   };
+
+  // Log when portion assignments change
+  useEffect(() => {
+    console.log("AppContext - portionAssignments updated:", JSON.stringify(portionAssignments));
+  }, [portionAssignments]);
 
   // Values to be provided to consuming components
   const value = {
@@ -165,6 +171,10 @@ export const AppProvider = ({ children }) => {
     personItemQuantities,
     setPersonItemQuantities,
     
+    // Portion assignments
+    portionAssignments,
+    setPortionAssignments, // Asegúrate de que esto está incluido
+    
     // Uploaded image path (from UploadBillPage)
     uploadedImagePath,
     setUploadedImagePath,
@@ -179,3 +189,5 @@ export const AppProvider = ({ children }) => {
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };
+
+export default AppContext; // Asegúrate de tener una exportación por defecto
