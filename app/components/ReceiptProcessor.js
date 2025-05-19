@@ -1,5 +1,6 @@
 import { Buffer } from 'buffer';
 import axios from 'axios';
+import * as ImageManipulator from 'expo-image-manipulator';
 
 class BillItem {
   constructor({ name, price, quantity = 1, unitPrice }) {
@@ -32,10 +33,48 @@ export default class ReceiptProcessor {
       // Create a FormData object
       const formData = new FormData();
       
-      // En React Native, podemos añadir el archivo directamente sin necesidad de crear un Blob
-      // Creamos un objeto tipo archivo con los datos necesarios
+      // Comprimimos la imagen antes de enviarla para evitar el error "Request Entity Too Large"
+      const base64Image = Buffer.from(imageBytes).toString('base64');
+      console.log('Tamaño original de la imagen:', base64Image.length, 'bytes');
+      
+      // Convertimos los bytes a un URI de imagen temporal para manipularla
+      const tempImageUri = `data:image/jpeg;base64,${base64Image}`;
+      
+      // Calculamos la calidad de compresión basada en el tamaño
+      let imageQuality = 0.8; // Calidad por defecto
+      
+      // Si la imagen es mayor a 1MB, comprimir progresivamente
+      if (base64Image.length > 1000000) {
+        console.log('Comprimiendo imagen grande para evitar errores de tamaño...');
+        imageQuality = 0.5;
+      }
+      
+      if (base64Image.length > 3000000) {
+        console.log('Imagen muy grande, comprimiendo agresivamente...');
+        imageQuality = 0.3;
+      }
+      
+      // Aplicamos la compresión y redimensionamiento si es necesario
+      let compressionActions = [];
+      
+      // Redimensionar si la imagen es muy grande (más de 3MB)
+      if (base64Image.length > 3000000) {
+        compressionActions.push({ resize: { width: 1200 } });
+      }
+      
+      console.log(`Comprimiendo imagen con calidad: ${imageQuality}`);
+      
+      const manipResult = await ImageManipulator.manipulateAsync(
+        tempImageUri,
+        compressionActions,
+        { compress: imageQuality, format: ImageManipulator.SaveFormat.JPEG }
+      );
+      
+      console.log('Imagen comprimida:', manipResult.uri);
+      
+      // En React Native, podemos añadir el archivo directamente al FormData
       formData.append('file', {
-        uri: 'data:image/jpeg;base64,' + Buffer.from(imageBytes).toString('base64'),
+        uri: manipResult.uri,
         type: 'image/jpeg',
         name: 'receipt.jpg',
       });
