@@ -423,6 +423,28 @@ export default function ItemsPage() {
     }
   }, [portionAssignments]);
 
+  // Textos en español directamente en vez de usar translate para asegurar castellano
+  const SPANISH_TEXTS = {
+    "Assign Portions Individually": "Asignar Unidades Individualmente",
+    "Portion": "Unidad",
+    "Cancel": "Cancelar",
+    "Save": "Guardar",
+    "Edit Portions": "Editar Unidades",
+    "Equal split": "División Igual",
+    "each": "cada uno",
+    "Full amount": "Importe completo",
+    "Shared": "Compartido",
+    "units": "unidades",
+    "unit price": "precio unitario",
+    "Who participated in this item?": "¿Quién participó en este artículo?",
+    "If no one is selected, this will be split equally among everyone": "Si no se selecciona a nadie, se dividirá equitativamente entre todos",
+    "portion remaining to assign": "unidad restante por asignar",
+    "portions remaining to assign": "unidades restantes por asignar",
+    "portion OVER assigned": "unidad asignada EN EXCESO",
+    "portions OVER assigned": "unidades asignadas EN EXCESO",
+    "Quantity:": "Cantidad:"
+  };
+
   const renderItem = ({ item, index }) => {
     // Use the quantity from the state
     const itemQuantity = items[index]?.quantity || 1;
@@ -487,7 +509,7 @@ export default function ItemsPage() {
           
           {/* Shared Switch */}
           <View style={styles.sharedContainer}>
-            <Text style={styles.sharedLabel}>{translate("Shared")}</Text>
+            <Text style={styles.sharedLabel}>{SPANISH_TEXTS["Shared"]}</Text>
             <Switch
               trackColor={{ false: "#E0E0E0", true: "#A5D6A7" }}
               thumbColor={sharedItems[index] ? "#4CAF50" : "#BDBDBD"}
@@ -653,7 +675,7 @@ export default function ItemsPage() {
               }}
             >
               <Text style={styles.editPortionsText}>
-                {translate("Edit Portions")}
+                {SPANISH_TEXTS["Edit Portions"]}
               </Text>
             </TouchableOpacity>
           )}
@@ -752,11 +774,11 @@ export default function ItemsPage() {
             <View style={styles.modalContainer}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>
-                  {translate("Assign Portions Individually")}
+                  {SPANISH_TEXTS["Assign Portions Individually"]}
                 </Text>
                 <Text style={styles.modalSubtitle}>
                   {modalItemIndex !== null && items[modalItemIndex] ? 
-                    `${items[modalItemIndex].quantity || 1} ${items[modalItemIndex].name}` : ''}
+                    `${items[modalItemIndex].name}` : ''}
                 </Text>
               </View>
               
@@ -765,7 +787,7 @@ export default function ItemsPage() {
                   Array.from({ length: items[modalItemIndex].quantity || 1 }).map((_, portionIndex) => (
                     <View key={portionIndex} style={styles.portionSection}>
                       <Text style={styles.portionTitle}>
-                        {translate("Portion")} {portionIndex + 1}
+                        {SPANISH_TEXTS["Portion"]} {portionIndex + 1}
                       </Text>
                       
                       <View style={styles.portionPeopleList}>
@@ -808,14 +830,14 @@ export default function ItemsPage() {
                   style={styles.modalCancelButton}
                   onPress={cancelModal}
                 >
-                  <Text style={styles.modalCancelText}>{translate("Cancel")}</Text>
+                  <Text style={styles.modalCancelText}>{SPANISH_TEXTS["Cancel"]}</Text>
                 </TouchableOpacity>
                 
                 <TouchableOpacity 
                   style={styles.modalSaveButton}
                   onPress={saveModalAssignments}
                 >
-                  <Text style={styles.modalSaveText}>{translate("Save")}</Text>
+                  <Text style={styles.modalSaveText}>{SPANISH_TEXTS["Save"]}</Text>
                 </TouchableOpacity>
               </View>
             </View>
