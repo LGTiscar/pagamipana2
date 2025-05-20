@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, ScrollView, Switch, Alert } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, ScrollView, Switch, Alert, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAppContext } from '../context/AppContext';
@@ -15,13 +15,19 @@ export default function ItemsPage() {
     assignments, setAssignments,
     sharedItems, setSharedItems,
     personItemQuantities, setPersonItemQuantities,
+    portionAssignments, setPortionAssignments, // IMPORTANTE: Usar el contexto global en lugar de estado local
     translate, // Get translation function
     currencySymbol // Get currency symbol
   } = useAppContext();
   
-  // No need for useEffect to parse params as we're now using global context
-  // All data is already available in context from previous pages
-
+  // Add modal state
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalItemIndex, setModalItemIndex] = useState(null);
+  const [tempAssignments, setTempAssignments] = useState({});
+  
+  // ELIMINAR esta línea - no necesitamos un estado local para portionAssignments
+  // const [portionAssignments, setPortionAssignments] = useState({});
+  
   const togglePersonForItem = (itemIndex, personId) => {
     const item = items[itemIndex];
     const itemQuantity = item?.quantity || 1;
@@ -80,9 +86,31 @@ export default function ItemsPage() {
 
   // Toggle shared status and reset counters when switching from ON to OFF
   const toggleSharedItem = (itemIndex) => {
-    setSharedItems(prev => {
-      const newSharedStatus = !prev[itemIndex];
+    const newSharedStatus = !sharedItems[itemIndex];
+    
+    // If turning shared ON, show the modal for individual assignments
+    if (newSharedStatus) {
+      // Initialize temporary assignments based on current assignments
+      const item = items[itemIndex];
+      const itemQuantity = item.quantity || 1;
+      const initialTempAssignments = {};
       
+      // Create entries for each portion
+      for (let i = 0; i < itemQuantity; i++) {
+        initialTempAssignments[i] = [];
+      }
+      
+      // Set up the modal with current item index and initial assignments
+      setModalItemIndex(itemIndex);
+      setTempAssignments(initialTempAssignments);
+      setModalVisible(true);
+      
+      // Don't update shared status yet - we'll do it when the user confirms in the modal
+      return;
+    }
+    
+    // Original logic for turning shared OFF
+    setSharedItems(prev => {
       // If turning shared OFF, we need to reset counters
       if (!newSharedStatus) { // switching from ON to OFF
         const item = items[itemIndex];
@@ -131,6 +159,87 @@ export default function ItemsPage() {
       
       return { ...prev, [itemIndex]: newSharedStatus };
     });
+  };
+  
+  // Handle toggling a person in the modal for a specific portion
+  const togglePersonForPortion = (portionIndex, personId) => {
+    setTempAssignments(prevAssignments => {
+      const updatedAssignments = { ...prevAssignments };
+      const currentPortionAssignment = [...(updatedAssignments[portionIndex] || [])];
+      
+      // Toggle the person for this portion
+      if (currentPortionAssignment.includes(personId)) {
+        updatedAssignments[portionIndex] = currentPortionAssignment.filter(id => id !== personId);
+      } else {
+        updatedAssignments[portionIndex] = [...currentPortionAssignment, personId];
+      }
+      
+      return updatedAssignments;
+    });
+  };
+  
+  // Add the missing getPersonNamesByIds function
+  const getPersonNamesByIds = (personIds) => {
+    if (!personIds) return [];
+    return personIds
+      .map(id => {
+        const person = people.find(p => p.id === id);
+        return person ? person.name : '';
+      })
+      .filter(name => name !== '');
+  };
+  
+  // Save assignments from modal and turn on shared mode
+  const saveModalAssignments = () => {
+    if (modalItemIndex === null) {
+      setModalVisible(false);
+      return;
+    }
+    
+    // First enable shared mode for this item
+    setSharedItems(prev => ({
+      ...prev,
+      [modalItemIndex]: true
+    }));
+    
+    console.log("=== GUARDANDO ASIGNACIONES POR UNIDADES EN CONTEXTO GLOBAL ===");
+    console.log("Item Index:", modalItemIndex);
+    console.log("Temp Assignments:", JSON.stringify(tempAssignments));
+    
+    // Store the portion-specific assignments in the GLOBAL context
+    setPortionAssignments(prev => {
+      const newAssignments = {
+        ...prev,
+        [modalItemIndex]: { ...tempAssignments }
+      };
+      
+      console.log("Nuevas asignaciones por unidades (contexto global):", JSON.stringify(newAssignments));
+      return newAssignments;
+    });
+    
+    // También actualizar las asignaciones generales para este item
+    // para que se muestre como asignado en la lista principal
+    const allAssignedPeople = new Set();
+    Object.values(tempAssignments).forEach(peopleForUnit => {
+      if (peopleForUnit && peopleForUnit.length) {
+        peopleForUnit.forEach(personId => allAssignedPeople.add(personId));
+      }
+    });
+    
+    setAssignments(prev => ({
+      ...prev,
+      [modalItemIndex]: Array.from(allAssignedPeople)
+    }));
+    
+    // Close the modal
+    setModalVisible(false);
+    setModalItemIndex(null);
+  };
+  
+  // Cancel modal without saving
+  const cancelModal = () => {
+    setModalVisible(false);
+    setModalItemIndex(null);
   };
 
   const getPersonById = (id) => {
@@ -292,6 +401,50 @@ export default function ItemsPage() {
     });
   };
 
+  // Add useEffect to initialize portion assignments from storage
+  useEffect(() => {
+    const loadAssignments = async () => {
+      try {
+        // We would load from AsyncStorage here in a real app
+        console.log("Loaded portion assignments from storage");
+      } catch (error) {
+        console.error("Error loading portion assignments:", error);
+      }
+    };
+    
+    loadAssignments();
+  }, []);
+
+  // Añadir un useEffect para mostrar información de depuración sobre las asignaciones
+  useEffect(() => {
+    if (Object.keys(portionAssignments).length > 0) {
+      console.log("=== ASIGNACIONES POR UNIDADES ACTUALES (CONTEXTO) ===");
+      console.log(JSON.stringify(portionAssignments));
+    }
+  }, [portionAssignments]);
+
+  // Textos en español directamente en vez de usar translate para asegurar castellano
+  const SPANISH_TEXTS = {
+    "Assign Portions Individually": "Asignar Unidades Individualmente",
+    "Portion": "Unidad",
+    "Cancel": "Cancelar",
+    "Save": "Guardar",
+    "Edit Portions": "Editar Unidades",
+    "Equal split": "División Igual",
+    "each": "cada uno",
+    "Full amount": "Importe completo",
+    "Shared": "Compartido",
+    "units": "unidades",
+    "unit price": "precio unitario",
+    "Who participated in this item?": "¿Quién participó en este artículo?",
+    "If no one is selected, this will be split equally among everyone": "Si no se selecciona a nadie, se dividirá equitativamente entre todos",
+    "portion remaining to assign": "unidad restante por asignar",
+    "portions remaining to assign": "unidades restantes por asignar",
+    "portion OVER assigned": "unidad asignada EN EXCESO",
+    "portions OVER assigned": "unidades asignadas EN EXCESO",
+    "Quantity:": "Cantidad:"
+  };
+
   const renderItem = ({ item, index }) => {
     // Use the quantity from the state
     const itemQuantity = items[index]?.quantity || 1;
@@ -300,6 +453,20 @@ export default function ItemsPage() {
     const currentTotalAssigned = calculateTotalAssignedQuantity(index);
     // Calculate remaining based on the current state quantity
     const remainingQuantity = itemQuantity - currentTotalAssigned;
+    
+    // Check if this item has portion assignments
+    const hasPortionAssignments = portionAssignments && 
+                                portionAssignments[index] && 
+                                Object.keys(portionAssignments[index]).length > 0 &&
+                                // Check if at least one portion has people assigned
+                                Object.values(portionAssignments[index]).some(portion => 
+                                  portion && portion.length > 0
+                                );
+    
+    // Include this debugging line
+    console.log(`Item ${item.name} has portion assignments: ${hasPortionAssignments}`, 
+                portionAssignments && portionAssignments[index] ? 
+                JSON.stringify(portionAssignments[index]) : "none");
     
     return (
       <View style={styles.itemCard}>
@@ -342,7 +509,7 @@ export default function ItemsPage() {
           
           {/* Shared Switch */}
           <View style={styles.sharedContainer}>
-            <Text style={styles.sharedLabel}>{translate("Shared")}</Text>
+            <Text style={styles.sharedLabel}>{SPANISH_TEXTS["Shared"]}</Text>
             <Switch
               trackColor={{ false: "#E0E0E0", true: "#A5D6A7" }}
               thumbColor={sharedItems[index] ? "#4CAF50" : "#BDBDBD"}
@@ -380,7 +547,7 @@ export default function ItemsPage() {
           </View>
         )}
 
-        {/* Show the person assignment section regardless of shared status */}
+        {/* Show the person assignment section - modified for shared items */}
         <View style={styles.assignmentSection}>
           <View style={styles.assignLabelContainer}>
             <Text style={styles.assignLabel}>{translate("Who participated in this item?")}</Text>
@@ -391,86 +558,127 @@ export default function ItemsPage() {
             )}
           </View>
           
-          <View style={styles.personAssignments}>
-            {people.map(person => {
-              // Get the person's quantity for this item
-              const personQuantity = personItemQuantities[index]?.[person.id] || 0;
-              const isAssigned = assignments[index]?.includes(person.id);
-              
-              return (
-                <View key={person.id} style={styles.personQuantityContainer}>
-                  {/* Make the whole bubble clickable for both quantity=1 and quantity>1 cases */}
-                  <TouchableOpacity 
-                    onPress={() => togglePersonForItem(index, person.id)}
-                    style={[
-                      styles.personBubble,
-                      isAssigned ? { borderColor: person.color } : styles.unassignedBubble
-                    ]}
-                  >
-                    {/* Avatar with initial */}
-                    <View style={[
-                      styles.miniAvatar, 
-                      { backgroundColor: person.color }
-                    ]}>
-                      <Text style={styles.miniAvatarText}>{person.initial}</Text>
-                    </View>
-                    
-                    {/* Minus Button - only for quantity > 1 */}
-                    {showQuantityControls && (
-                      <TouchableOpacity 
-                        style={styles.inlineMinus}
-                        onPress={(e) => {
-                          e.stopPropagation(); // Prevent parent touchable from firing
-                          decreaseQuantity(index, person.id);
-                        }}
-                      >
-                        <Text style={styles.inlineButtonText}>−</Text>
-                      </TouchableOpacity>
-                    )}
-                    
-                    {/* Person name */}
-                    <Text style={styles.personBubbleText}>
-                      {person.name}
+          {/* For shared items with portion assignments, show portion details */}
+          {sharedItems[index] && hasPortionAssignments ? (
+            <View style={styles.portionDetails}>
+              {Object.keys(portionAssignments[index]).map((portionIdx) => {
+                const portionPeopleIds = portionAssignments[index][portionIdx];
+                if (portionPeopleIds.length === 0) return null;
+                
+                const peopleNames = getPersonNamesByIds(portionPeopleIds);
+                
+                return (
+                  <View key={`portion-${portionIdx}`} style={styles.portionRow}>
+                    <Text style={styles.portionLabel}>
+                      {translate("Portion")} {parseInt(portionIdx) + 1}:
                     </Text>
-                    
-                    {/* Quantity Value - only for quantity > 1 */}
-                    {showQuantityControls && (
-                      <Text style={styles.inlineQuantity}>{personQuantity}</Text>
-                    )}
-                    
-                    {/* Plus Button - only for quantity > 1 */}
-                    {showQuantityControls && (
-                      <TouchableOpacity 
-                        style={[
-                          styles.inlinePlus,
-                          // Different visual state based on shared status
-                          (sharedItems[index]) 
-                            // For shared items: disable only if this person has reached max quantity
-                            ? (personItemQuantities[index]?.[person.id] >= itemQuantity ? styles.disabledButton : {})
-                            // For non-shared items: disable if no remaining quantity and person has none
-                            : (remainingQuantity <= 0 && personQuantity === 0) ? styles.disabledButton : {}
-                        ]}
-                        onPress={(e) => {
-                          e.stopPropagation(); // Prevent parent touchable from firing
-                          increaseQuantity(index, person.id);
-                        }}
-                      >
-                        <Text style={[
-                          styles.inlineButtonText,
-                          // Different visual state based on shared status
-                          (sharedItems[index]) 
-                            // For shared items: disable text only if this person has reached max quantity
-                            ? (personItemQuantities[index]?.[person.id] >= itemQuantity ? styles.disabledButtonText : {})
-                            // For non-shared items: disable if no remaining quantity and person has none
-                            : (remainingQuantity <= 0 && personQuantity === 0) ? styles.disabledButtonText : {}
-                        ]}>+</Text>
-                      </TouchableOpacity>
-                    )}
-                  </TouchableOpacity>
-                </View>
-              );
-            })}
-          </View>
+                    <Text style={styles.portionPeople}>
+                      {peopleNames.join(', ')}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+          ) : (
+            // Original people bubbles for non-shared or shared items without portion assignments
+            <View style={styles.personAssignments}>
+              {people.map(person => {
+                // Get the person's quantity for this item
+                const personQuantity = personItemQuantities[index]?.[person.id] || 0;
+                const isAssigned = assignments[index]?.includes(person.id);
+                
+                return (
+                  <View key={person.id} style={styles.personQuantityContainer}>
+                    {/* Make the whole bubble clickable for both quantity=1 and quantity>1 cases */}
+                    <TouchableOpacity 
+                      onPress={() => togglePersonForItem(index, person.id)}
+                      style={[
+                        styles.personBubble,
+                        isAssigned ? { borderColor: person.color } : styles.unassignedBubble
+                      ]}
+                    >
+                      {/* Avatar with initial */}
+                      <View style={[
+                        styles.miniAvatar, 
+                        { backgroundColor: person.color }
+                      ]}>
+                        <Text style={styles.miniAvatarText}>{person.initial}</Text>
+                      </View>
+                      
+                      {/* Minus Button - only for quantity > 1 and not shared */}
+                      {showQuantityControls && !sharedItems[index] && (
+                        <TouchableOpacity 
+                          style={styles.inlineMinus}
+                          onPress={(e) => {
+                            e.stopPropagation(); // Prevent parent touchable from firing
+                            decreaseQuantity(index, person.id);
+                          }}
+                        >
+                          <Text style={styles.inlineButtonText}>−</Text>
+                        </TouchableOpacity>
+                      )}
+                      
+                      {/* Person name */}
+                      <Text style={styles.personBubbleText}>
+                        {person.name}
+                      </Text>
+                      
+                      {/* Quantity Value - only for quantity > 1 and not shared */}
+                      {showQuantityControls && !sharedItems[index] && (
+                        <Text style={styles.inlineQuantity}>{personQuantity}</Text>
+                      )}
+                      
+                      {/* Plus Button - only for quantity > 1 and not shared */}
+                      {showQuantityControls && !sharedItems[index] && (
+                        <TouchableOpacity 
+                          style={[
+                            styles.inlinePlus,
+                            // Different visual state based on shared status
+                            (sharedItems[index]) 
+                              // For shared items: disable only if this person has reached max quantity
+                              ? (personItemQuantities[index]?.[person.id] >= itemQuantity ? styles.disabledButton : {})
+                              // For non-shared items: disable if no remaining quantity and person has none
+                              : (remainingQuantity <= 0 && personQuantity === 0) ? styles.disabledButton : {}
+                          ]}
+                          onPress={(e) => {
+                            e.stopPropagation(); // Prevent parent touchable from firing
+                            increaseQuantity(index, person.id);
+                          }}
+                        >
+                          <Text style={[
+                            styles.inlineButtonText,
+                            // Different visual state based on shared status
+                            (sharedItems[index]) 
+                              // For shared items: disable text only if this person has reached max quantity
+                              ? (personItemQuantities[index]?.[person.id] >= itemQuantity ? styles.disabledButtonText : {})
+                              // For non-shared items: disable if no remaining quantity and person has none
+                              : (remainingQuantity <= 0 && personQuantity === 0) ? styles.disabledButtonText : {}
+                          ]}>+</Text>
+                        </TouchableOpacity>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+          
+          {/* Edit button for shared items with portion assignments */}
+          {sharedItems[index] && hasPortionAssignments && (
+            <TouchableOpacity 
+              style={styles.editPortionsButton}
+              onPress={() => {
+                // Initialize temporary assignments with current portion assignments
+                setTempAssignments({...portionAssignments[index]});
+                setModalItemIndex(index);
+                setModalVisible(true);
+              }}
+            >
+              <Text style={styles.editPortionsText}>
+                {SPANISH_TEXTS["Edit Portions"]}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     );
@@ -554,6 +762,87 @@ export default function ItemsPage() {
             <Text style={styles.nextButtonText}>{translate("Next")}</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Shared Item Assignment Modal */}
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={modalVisible}
+          onRequestClose={cancelModal}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContainer}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>
+                  {SPANISH_TEXTS["Assign Portions Individually"]}
+                </Text>
+                <Text style={styles.modalSubtitle}>
+                  {modalItemIndex !== null && items[modalItemIndex] ? 
+                    `${items[modalItemIndex].name}` : ''}
+                </Text>
+              </View>
+              
+              <ScrollView style={styles.modalContent}>
+                {modalItemIndex !== null && items[modalItemIndex] && 
+                  Array.from({ length: items[modalItemIndex].quantity || 1 }).map((_, portionIndex) => (
+                    <View key={portionIndex} style={styles.portionSection}>
+                      <Text style={styles.portionTitle}>
+                        {SPANISH_TEXTS["Portion"]} {portionIndex + 1}
+                      </Text>
+                      
+                      <View style={styles.portionPeopleList}>
+                        {people.map(person => {
+                          const isAssigned = tempAssignments[portionIndex]?.includes(person.id);
+                          
+                          return (
+                            <View key={`${portionIndex}-${person.id}`} style={styles.personQuantityContainer}>
+                              <TouchableOpacity 
+                                onPress={() => togglePersonForPortion(portionIndex, person.id)}
+                                style={[
+                                  styles.personBubble,
+                                  isAssigned ? { borderColor: person.color } : styles.unassignedBubble
+                                ]}
+                              >
+                                {/* Avatar with initial */}
+                                <View style={[
+                                  styles.miniAvatar, 
+                                  { backgroundColor: person.color }
+                                ]}>
+                                  <Text style={styles.miniAvatarText}>{person.initial}</Text>
+                                </View>
+                                
+                                {/* Person name */}
+                                <Text style={styles.personBubbleText}>
+                                  {person.name}
+                                </Text>
+                              </TouchableOpacity>
+                            </View>
+                          );
+                        })}
+                      </View>
+                    </View>
+                  ))
+                }
+              </ScrollView>
+              
+              <View style={styles.modalFooter}>
+                <TouchableOpacity 
+                  style={styles.modalCancelButton}
+                  onPress={cancelModal}
+                >
+                  <Text style={styles.modalCancelText}>{SPANISH_TEXTS["Cancel"]}</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={styles.modalSaveButton}
+                  onPress={saveModalAssignments}
+                >
+                  <Text style={styles.modalSaveText}>{SPANISH_TEXTS["Save"]}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </ScrollView>
     </SafeAreaView>
   );
@@ -739,7 +1028,7 @@ const styles = StyleSheet.create({
   miniAvatarText: {
     color: 'white',
     fontWeight: 'bold',
-    fontSize: 14,
+    fontSize: 16,
   },
   personChipText: {
     fontSize: 14,
@@ -954,5 +1243,161 @@ const styles = StyleSheet.create({
     color: '#757575',
     fontStyle: 'italic',
     marginTop: 2,
+  },
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContainer: {
+    width: '100%',
+    maxHeight: '90%',
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  modalHeader: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+    paddingBottom: 12,
+    marginBottom: 12,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2E7D32',
+    marginBottom: 4,
+  },
+  modalSubtitle: {
+    fontSize: 16,
+    color: '#424242',
+  },
+  modalContent: {
+    maxHeight: '70%',
+  },
+  portionSection: {
+    marginBottom: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEEEEE',
+  },
+  portionTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#424242',
+    marginBottom: 10,
+  },
+  portionPeopleList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-start',
+    marginVertical: 12,
+  },
+  highlightedAvatar: {
+    borderWidth: 2,
+    borderColor: '#FF5252',  // Red border for selected people
+  },
+  modalPersonContainer: {
+    alignItems: 'center',
+    marginRight: 16,
+    marginBottom: 16,
+    width: 60,
+  },
+  modalPersonCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  modalPersonInitial: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  modalPersonName: {
+    fontSize: 12,
+    color: '#424242',
+    textAlign: 'center',
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 16,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+  },
+  modalCancelButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+    backgroundColor: '#F5F5F5',
+    marginRight: 12,
+  },
+  modalCancelText: {
+    fontSize: 14,
+    color: '#757575',
+    fontWeight: '500',
+  },
+  modalSaveButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+    borderRadius: 6,
+    backgroundColor: '#4CAF50',
+  },
+  modalSaveText: {
+    fontSize: 14,
+    color: 'white',
+    fontWeight: '500',
+  },
+  
+  // New styles for portion details display
+  portionDetails: {
+    marginTop: 8,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 8,
+    padding: 10,
+  },
+  portionRow: {
+    flexDirection: 'row',
+    marginBottom: 6,
+    alignItems: 'center',
+  },
+  portionLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#424242',
+    marginRight: 8,
+    width: 80,
+  },
+  portionPeople: {
+    fontSize: 14,
+    color: '#424242',
+    flex: 1,
+  },
+  editPortionsButton: {
+    marginTop: 12,
+    backgroundColor: '#E8F5E9',
+    borderWidth: 1,
+    borderColor: '#4CAF50',
+    borderRadius: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    alignSelf: 'flex-start',
+  },
+  editPortionsText: {
+    color: '#4CAF50',
+    fontSize: 14,
+    fontWeight: '500',
   },
 });

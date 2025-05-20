@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -22,11 +22,6 @@ export default function SummaryPage() {
     translate, // Get translation function
     currencySymbol // Get currency symbol
   } = useAppContext();
-
-  // Justo después de obtener datos del contexto, añade este código para depuración
-  useEffect(() => {
-    console.log('SummaryPage - portionAssignments from context:', JSON.stringify(portionAssignments));
-  }, [portionAssignments]);
 
   // Get the person who paid
   const getPayer = () => {
@@ -64,10 +59,6 @@ export default function SummaryPage() {
     console.log('Person Item Quantities:', JSON.stringify(personItemQuantities));
     console.log('Shared Items:', JSON.stringify(sharedItems));
     console.log('People:', JSON.stringify(people.map(p => ({ id: p.id, name: p.name }))));
-    console.log('Portion Assignments:', JSON.stringify(portionAssignments));
-    
-    console.log('All Portion Assignments in context:', JSON.stringify(portionAssignments));
-    console.log('Portion Assignment keys:', Object.keys(portionAssignments));
     
     // Step 1: Calculate total bill amount
     let totalBillAmount = 0;
@@ -104,9 +95,6 @@ export default function SummaryPage() {
       if (thisItemPortionAssignments) {
         console.log(`Portion assignments keys for ${item.name}:`, Object.keys(thisItemPortionAssignments));
         console.log(`Full portion assignments data for ${item.name}:`, JSON.stringify(thisItemPortionAssignments));
-      } else {
-        console.log(`NO HAY ASIGNACIONES DE UNIDADES para ${item.name}. Verificar portionAssignments[${itemIndex}]`);
-        console.log(`Keys in portionAssignments:`, Object.keys(portionAssignments));
       }
       
       // IMPORTANTE: Manejar primero y con prioridad las asignaciones por unidades
