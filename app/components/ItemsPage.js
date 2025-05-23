@@ -3,9 +3,9 @@ import { View, Text, FlatList, StyleSheet, TouchableOpacity, ScrollView, Switch,
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAppContext } from '../context/AppContext';
-import { copilot, walkthroughable, CopilotStep } from 'react-native-copilot';
+import Tooltip from 'react-native-walkthrough-tooltip';
 
-export default function ItemsPage() {
+function ItemsPage(props) {
   const router = useRouter();
   
   // Use global context instead of local state
@@ -29,6 +29,9 @@ export default function ItemsPage() {
   // ELIMINAR esta línea - no necesitamos un estado local para portionAssignments
   // const [portionAssignments, setPortionAssignments] = useState({});
   
+  // Tooltip state for walkthrough
+  const [showSwitchTooltip, setShowSwitchTooltip] = useState(true); // Show on first load
+
   const togglePersonForItem = (itemIndex, personId) => {
     const item = items[itemIndex];
     const itemQuantity = item?.quantity || 1;
@@ -508,17 +511,38 @@ export default function ItemsPage() {
             )}
           </View>
           
-          {/* Shared Switch */}
-          <View style={styles.sharedContainer}>
-            <Text style={styles.sharedLabel}>{SPANISH_TEXTS["Shared"]}</Text>
-            <Switch
-              trackColor={{ false: "#E0E0E0", true: "#A5D6A7" }}
-              thumbColor={sharedItems[index] ? "#4CAF50" : "#BDBDBD"}
-              ios_backgroundColor="#E0E0E0"
-              onValueChange={() => toggleSharedItem(index)}
-              value={sharedItems[index] || false}
-            />
-          </View>
+          {/* Shared Switch - walkthrough only for first item */}
+          {index === 0 ? (
+            <Tooltip
+              isVisible={showSwitchTooltip}
+              content={<Text>Pulsa aquí para activar el modo "Compartido" y asignar unidades individuales de este ítem.</Text>}
+              placement="bottom"
+              onClose={() => setShowSwitchTooltip(false)}
+              showChildInTooltip={false}
+            >
+              <View style={styles.sharedContainer}>
+                <Text style={styles.sharedLabel}>{SPANISH_TEXTS["Shared"]}</Text>
+                <Switch
+                  trackColor={{ false: "#E0E0E0", true: "#A5D6A7" }}
+                  thumbColor={sharedItems[index] ? "#4CAF50" : "#BDBDBD"}
+                  ios_backgroundColor="#E0E0E0"
+                  onValueChange={() => toggleSharedItem(index)}
+                  value={sharedItems[index] || false}
+                />
+              </View>
+            </Tooltip>
+          ) : (
+            <View style={styles.sharedContainer}>
+              <Text style={styles.sharedLabel}>{SPANISH_TEXTS["Shared"]}</Text>
+              <Switch
+                trackColor={{ false: "#E0E0E0", true: "#A5D6A7" }}
+                thumbColor={sharedItems[index] ? "#4CAF50" : "#BDBDBD"}
+                ios_backgroundColor="#E0E0E0"
+                onValueChange={() => toggleSharedItem(index)}
+                value={sharedItems[index] || false}
+              />
+            </View>
+          )}
         </View>
 
         {/* Unit Price Display (adjust based on state quantity) */}
@@ -848,6 +872,8 @@ export default function ItemsPage() {
     </SafeAreaView>
   );
 }
+
+export default ItemsPage;
 
 const styles = StyleSheet.create({
   safeArea: {
