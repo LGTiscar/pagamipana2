@@ -30,7 +30,14 @@ function ItemsPage(props) {
   // const [portionAssignments, setPortionAssignments] = useState({});
   
   // Tooltip state for walkthrough
-  const [showSwitchTooltip, setShowSwitchTooltip] = useState(true); // Show on first load
+  const [showSwitchTooltip, setShowSwitchTooltip] = useState(false); // Initialize to false
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowSwitchTooltip(true);
+    }, 150); // Delay to allow layout to settle
+    return () => clearTimeout(timer);
+  }, []); // Run once on mount
 
   const togglePersonForItem = (itemIndex, personId) => {
     const item = items[itemIndex];
@@ -517,18 +524,23 @@ function ItemsPage(props) {
               <Text style={styles.sharedLabel}>{SPANISH_TEXTS["Shared"]}</Text>
               <Tooltip
                 isVisible={showSwitchTooltip}
-                content={<Text>Pulsa aquí para activar el modo "Compartido" y asignar unidades individuales de este ítem.</Text>}
+                content={<Text>Pulsa aquí si este artículo fue compartido y asigna cada cliente con la unidad que consumió.</Text>}
                 placement="bottom"
                 onClose={() => setShowSwitchTooltip(false)}
                 showChildInTooltip={false}
+                childContentSpacing={0}
+                // Use displayInsets to force the tooltip to stay within the card
+                displayInsets={{ top: 0, bottom: 0, left: 0, right: 0 }}
               >
-                <Switch
-                  trackColor={{ false: "#E0E0E0", true: "#A5D6A7" }}
-                  thumbColor={sharedItems[index] ? "#4CAF50" : "#BDBDBD"}
-                  ios_backgroundColor="#E0E0E0"
-                  onValueChange={() => toggleSharedItem(index)}
-                  value={sharedItems[index] || false}
-                />
+                <View collapsable={false}>
+                  <Switch
+                    trackColor={{ false: "#E0E0E0", true: "#A5D6A7" }}
+                    thumbColor={sharedItems[index] ? "#4CAF50" : "#BDBDBD"}
+                    ios_backgroundColor="#E0E0E0"
+                    onValueChange={() => toggleSharedItem(index)}
+                    value={sharedItems[index] || false}
+                  />
+                </View>
               </Tooltip>
             </View>
           ) : (
@@ -1013,9 +1025,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   sharedLabel: {
-    fontSize: 14,
-    color: '#424242',
-    marginRight: 8,
+    fontSize: 16,
+    color: '#333',
+    marginRight: 10, // Provides spacing between label and switch
+    flex: 1, // Ensure label takes available space, pushing switch to the right
   },
   assignLabel: {
     fontSize: 14,
