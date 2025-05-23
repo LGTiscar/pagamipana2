@@ -3,6 +3,7 @@ import { View, Text, FlatList, StyleSheet, TouchableOpacity, ScrollView, Switch,
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAppContext } from '../context/AppContext';
+import { copilot, walkthroughable, CopilotStep } from 'react-native-copilot';
 
 export default function ItemsPage() {
   const router = useRouter();
