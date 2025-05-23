@@ -513,15 +513,15 @@ function ItemsPage(props) {
           
           {/* Shared Switch - walkthrough only for first item */}
           {index === 0 ? (
-            <Tooltip
-              isVisible={showSwitchTooltip}
-              content={<Text>Pulsa aquí para activar el modo "Compartido" y asignar unidades individuales de este ítem.</Text>}
-              placement="bottom"
-              onClose={() => setShowSwitchTooltip(false)}
-              showChildInTooltip={false}
-            >
-              <View style={styles.sharedContainer}>
-                <Text style={styles.sharedLabel}>{SPANISH_TEXTS["Shared"]}</Text>
+            <View style={styles.sharedContainer}>
+              <Text style={styles.sharedLabel}>{SPANISH_TEXTS["Shared"]}</Text>
+              <Tooltip
+                isVisible={showSwitchTooltip}
+                content={<Text>Pulsa aquí para activar el modo "Compartido" y asignar unidades individuales de este ítem.</Text>}
+                placement="bottom"
+                onClose={() => setShowSwitchTooltip(false)}
+                showChildInTooltip={false}
+              >
                 <Switch
                   trackColor={{ false: "#E0E0E0", true: "#A5D6A7" }}
                   thumbColor={sharedItems[index] ? "#4CAF50" : "#BDBDBD"}
@@ -529,8 +529,8 @@ function ItemsPage(props) {
                   onValueChange={() => toggleSharedItem(index)}
                   value={sharedItems[index] || false}
                 />
-              </View>
-            </Tooltip>
+              </Tooltip>
+            </View>
           ) : (
             <View style={styles.sharedContainer}>
               <Text style={styles.sharedLabel}>{SPANISH_TEXTS["Shared"]}</Text>
@@ -1010,6 +1010,7 @@ const styles = StyleSheet.create({
   sharedContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
   sharedLabel: {
     fontSize: 14,
