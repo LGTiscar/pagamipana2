@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, ScrollView, Switch, Alert, Modal } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, ScrollView, Alert, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAppContext } from '../context/AppContext';
@@ -444,7 +444,7 @@ function ItemsPage(props) {
     "Equal split": "División Igual",
     "each": "cada uno",
     "Full amount": "Importe completo",
-    "Shared": "Compartido",
+    "Shared": "Dividir",
     "units": "unidades",
     "unit price": "precio unitario",
     "Who participated in this item?": "¿Quién participó en este artículo?",
@@ -518,13 +518,13 @@ function ItemsPage(props) {
             )}
           </View>
           
-          {/* Shared Switch - walkthrough only for first item */}
+          {/* Shared Button - walkthrough only for first item */}
           {index === 0 ? (
             <View style={styles.sharedContainer}>
               <Text style={styles.sharedLabel}>{SPANISH_TEXTS["Shared"]}</Text>
               <Tooltip
                 isVisible={showSwitchTooltip}
-                content={<Text>Pulsa aquí si este artículo fue compartido y asigna cada cliente con la unidad que consumió.</Text>}
+                content={<Text>Pulsa este botón si este artículo fue compartido entre varias personas y quieres asignar cada unidad individualmente.</Text>}
                 placement="bottom"
                 onClose={() => setShowSwitchTooltip(false)}
                 showChildInTooltip={false}
@@ -533,26 +533,36 @@ function ItemsPage(props) {
                 displayInsets={{ top: 0, bottom: 0, left: 0, right: 0 }}
               >
                 <View collapsable={false}>
-                  <Switch
-                    trackColor={{ false: "#E0E0E0", true: "#A5D6A7" }}
-                    thumbColor={sharedItems[index] ? "#4CAF50" : "#BDBDBD"}
-                    ios_backgroundColor="#E0E0E0"
-                    onValueChange={() => toggleSharedItem(index)}
-                    value={sharedItems[index] || false}
-                  />
+                  <TouchableOpacity
+                    style={[
+                      styles.sharedButton,
+                      sharedItems[index] && styles.sharedButtonActive
+                    ]}
+                    onPress={() => toggleSharedItem(index)}
+                  >
+                    <Text style={[
+                      styles.sharedButtonIcon,
+                      sharedItems[index] && styles.sharedButtonIconActive
+                    ]}>÷</Text>
+                  </TouchableOpacity>
                 </View>
               </Tooltip>
             </View>
           ) : (
             <View style={styles.sharedContainer}>
               <Text style={styles.sharedLabel}>{SPANISH_TEXTS["Shared"]}</Text>
-              <Switch
-                trackColor={{ false: "#E0E0E0", true: "#A5D6A7" }}
-                thumbColor={sharedItems[index] ? "#4CAF50" : "#BDBDBD"}
-                ios_backgroundColor="#E0E0E0"
-                onValueChange={() => toggleSharedItem(index)}
-                value={sharedItems[index] || false}
-              />
+              <TouchableOpacity
+                style={[
+                  styles.sharedButton,
+                  sharedItems[index] && styles.sharedButtonActive
+                ]}
+                onPress={() => toggleSharedItem(index)}
+              >
+                <Text style={[
+                  styles.sharedButtonIcon,
+                  sharedItems[index] && styles.sharedButtonIconActive
+                ]}>÷</Text>
+              </TouchableOpacity>
             </View>
           )}
         </View>
@@ -607,7 +617,7 @@ function ItemsPage(props) {
                 return (
                   <View key={`portion-${portionIdx}`} style={styles.portionRow}>
                     <Text style={styles.portionLabel}>
-                      {translate("Portion")} {parseInt(portionIdx) + 1}:
+                      {SPANISH_TEXTS["Portion"]} {parseInt(portionIdx) + 1}:
                     </Text>
                     <Text style={styles.portionPeople}>
                       {peopleNames.join(', ')}
@@ -1047,8 +1057,35 @@ const styles = StyleSheet.create({
   sharedLabel: {
     fontSize: 16,
     color: '#333',
-    marginRight: 10, // Provides spacing between label and switch
-    flex: 1, // Ensure label takes available space, pushing switch to the right
+    marginRight: 10, // Provides spacing between label and button
+    flex: 1, // Ensure label takes available space, pushing button to the right
+  },
+  sharedButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F5F5F5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 1,
+  },
+  sharedButtonActive: {
+    backgroundColor: '#4CAF50',
+    borderColor: '#2E7D32',
+  },
+  sharedButtonIcon: {
+    fontSize: 24,
+    color: '#757575',
+    fontWeight: 'bold',
+  },
+  sharedButtonIconActive: {
+    color: 'white',
   },
   assignLabel: {
     fontSize: 14,
