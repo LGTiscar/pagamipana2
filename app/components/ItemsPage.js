@@ -3,8 +3,9 @@ import { View, Text, FlatList, StyleSheet, TouchableOpacity, ScrollView, Switch,
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAppContext } from '../context/AppContext';
+import Tooltip from 'react-native-walkthrough-tooltip';
 
-export default function ItemsPage() {
+function ItemsPage(props) {
   const router = useRouter();
   
   // Use global context instead of local state
@@ -28,6 +29,16 @@ export default function ItemsPage() {
   // ELIMINAR esta línea - no necesitamos un estado local para portionAssignments
   // const [portionAssignments, setPortionAssignments] = useState({});
   
+  // Tooltip state for walkthrough
+  const [showSwitchTooltip, setShowSwitchTooltip] = useState(false); // Initialize to false
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowSwitchTooltip(true);
+    }, 150); // Delay to allow layout to settle
+    return () => clearTimeout(timer);
+  }, []); // Run once on mount
+
   const togglePersonForItem = (itemIndex, personId) => {
     const item = items[itemIndex];
     const itemQuantity = item?.quantity || 1;
@@ -507,17 +518,43 @@ export default function ItemsPage() {
             )}
           </View>
           
-          {/* Shared Switch */}
-          <View style={styles.sharedContainer}>
-            <Text style={styles.sharedLabel}>{SPANISH_TEXTS["Shared"]}</Text>
-            <Switch
-              trackColor={{ false: "#E0E0E0", true: "#A5D6A7" }}
-              thumbColor={sharedItems[index] ? "#4CAF50" : "#BDBDBD"}
-              ios_backgroundColor="#E0E0E0"
-              onValueChange={() => toggleSharedItem(index)}
-              value={sharedItems[index] || false}
-            />
-          </View>
+          {/* Shared Switch - walkthrough only for first item */}
+          {index === 0 ? (
+            <View style={styles.sharedContainer}>
+              <Text style={styles.sharedLabel}>{SPANISH_TEXTS["Shared"]}</Text>
+              <Tooltip
+                isVisible={showSwitchTooltip}
+                content={<Text>Pulsa aquí si este artículo fue compartido y asigna cada cliente con la unidad que consumió.</Text>}
+                placement="bottom"
+                onClose={() => setShowSwitchTooltip(false)}
+                showChildInTooltip={false}
+                childContentSpacing={0}
+                // Use displayInsets to force the tooltip to stay within the card
+                displayInsets={{ top: 0, bottom: 0, left: 0, right: 0 }}
+              >
+                <View collapsable={false}>
+                  <Switch
+                    trackColor={{ false: "#E0E0E0", true: "#A5D6A7" }}
+                    thumbColor={sharedItems[index] ? "#4CAF50" : "#BDBDBD"}
+                    ios_backgroundColor="#E0E0E0"
+                    onValueChange={() => toggleSharedItem(index)}
+                    value={sharedItems[index] || false}
+                  />
+                </View>
+              </Tooltip>
+            </View>
+          ) : (
+            <View style={styles.sharedContainer}>
+              <Text style={styles.sharedLabel}>{SPANISH_TEXTS["Shared"]}</Text>
+              <Switch
+                trackColor={{ false: "#E0E0E0", true: "#A5D6A7" }}
+                thumbColor={sharedItems[index] ? "#4CAF50" : "#BDBDBD"}
+                ios_backgroundColor="#E0E0E0"
+                onValueChange={() => toggleSharedItem(index)}
+                value={sharedItems[index] || false}
+              />
+            </View>
+          )}
         </View>
 
         {/* Unit Price Display (adjust based on state quantity) */}
@@ -848,6 +885,8 @@ export default function ItemsPage() {
   );
 }
 
+export default ItemsPage;
+
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -983,11 +1022,13 @@ const styles = StyleSheet.create({
   sharedContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
   sharedLabel: {
-    fontSize: 14,
-    color: '#424242',
-    marginRight: 8,
+    fontSize: 16,
+    color: '#333',
+    marginRight: 10, // Provides spacing between label and switch
+    flex: 1, // Ensure label takes available space, pushing switch to the right
   },
   assignLabel: {
     fontSize: 14,
