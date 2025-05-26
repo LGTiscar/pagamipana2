@@ -1,11 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import ViewShot, { captureRef } from 'react-native-view-shot';
+import RNHTMLtoPDF from 'react-native-html-to-pdf';
+import Share from 'react-native-share';
 import { useRouter } from 'expo-router';
 import { useAppContext } from '../context/AppContext';
 
 export default function SummaryPage() {
   const router = useRouter();
+  const summaryViewRef = useRef();
   
   // Add state to track expanded person cards
   const [expandedPersons, setExpandedPersons] = useState({});
@@ -386,9 +390,150 @@ export default function SummaryPage() {
     return (totalBill - payerSpent).toFixed(2);
   };
 
+  const captureSummaryAsImage = async () => {
+    try {
+      const uri = await captureRef(summaryViewRef, {
+        format: "png",
+        quality: 0.9,
+        result: "uri"
+      });
+      await Share.open({ url: uri, type: 'image/png', failOnCancel: false });
+    } catch (error) {
+      console.error("Error capturing image:", error);
+    }
+  };
+
+  const generateSummaryAsPdf = async () => {
+    const payer = getPayer();
+    const totalBill = calculateTotal();
+    let htmlContent = `
+      <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; color: #333; }
+            .header { text-align: center; margin-bottom: 30px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+            .header h1 { color: #2E7D32; }
+            .bill-summary, .person-owes { margin-bottom: 20px; border: 1px solid #ddd; padding: 15px; border-radius: 8px; background-color: #f9f9f9; }
+            .bill-summary p, .person-owes p { margin: 5px 0; font-size: 16px; }
+            h2 { color: #2E7D32; margin-top: 30px; border-bottom: 1px solid #eee; padding-bottom: 5px;}
+            h3 { color: #4CAF50; margin-bottom: 10px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+            th, td { border: 1px solid #ccc; padding: 10px; text-align: left; }
+            th { background-color: #E8F5E9; color: #2E7D32; }
+            .total { font-weight: bold; font-size: 18px; color: #D32F2F; }
+            .payer-total { font-weight: bold; font-size: 18px; color: #4CAF50; }
+            .item-details { font-size: 0.9em; color: #555; }
+          </style>
+        </head>
+        <body>
+          <div class="header"><h1>${translate("Bill Summary")}</h1></div>
+          <div class="bill-summary">
+            <p><strong>${translate("Total Bill")}:</strong> ${currencySymbol}${totalBill}</p>
+            <p><strong>${translate("Paid by")}:</strong> ${payer?.name || translate("Not specified")}</p>
+          </div>
+          <h2>${translate("Who Owes What")}</h2>`;
+
+    people.forEach(person => {
+      const amountOwed = owes[person.id] || 0;
+      const isPayer = person.id === paidBy;
+
+      htmlContent += `
+        <div class="person-owes">
+          <h3>${person.name} ${isPayer ? `(${translate("Paid the bill")})` : ''}</h3>`;
+      
+      if (isPayer) {
+        const personalAmount = personalSpending[person.id] || 0;
+        htmlContent += `<p><strong>${translate("Your consumption")}:</strong> ${currencySymbol}${personalAmount.toFixed(2)}</p>`;
+        htmlContent += `<p><strong>${translate("Others owe you")}:</strong> ${currencySymbol}${getPayerRefund()}</p>`;
+        htmlContent += `<p class="payer-total">${translate("Total paid")}: ${currencySymbol}${totalBill}</p>`;
+      } else {
+        htmlContent += `<p class="total">${translate("Owes")}: ${currencySymbol}${amountOwed.toFixed(2)} ${translate("to")} ${payer?.name || translate("payer")}</p>`;
+      }
+
+      if (itemBreakdowns[person.id] && itemBreakdowns[person.id].length > 0) {
+        htmlContent += `<h4>${translate("Item Breakdown")}:</h4>
+                       <table>
+                         <thead><tr><th>${translate("Item")}</th><th>${translate("Details")}</th><th>${translate("Amount")}</th></tr></thead>
+                         <tbody>`;
+        itemBreakdowns[person.id].forEach(item => {
+          htmlContent += `
+            <tr>
+              <td>${item.name}</td>
+              <td class="item-details">${item.details}</td>
+              <td>${currencySymbol}${item.amount}</td>
+            </tr>`;
+        });
+        htmlContent += `</tbody></table>`;
+      } else if (!isPayer) {
+        htmlContent += `<p>${translate("No items assigned")}</p>`;
+      }
+      htmlContent += `</div>`;
+    });
+
+    htmlContent += `</body></html>`;
+
+    try {
+      const options = {
+        html: htmlContent,
+        fileName: translate('BillSummary'),
+        directory: 'Documents', // For iOS, 'Documents' is standard. For Android, this saves to an app-specific directory.
+      };
+      const file = await RNHTMLtoPDF.convert(options);
+      const shareUrl = Platform.OS === 'android' ? 'file://' + file.filePath : file.filePath;
+      await Share.open({
+        url: shareUrl,
+        type: 'application/pdf',
+        failOnCancel: false,
+        title: translate('Bill Summary PDF'),
+      });
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+    }
+  };
+
+  const shareToWhatsApp = async () => {
+    const payer = getPayer();
+    const totalBill = calculateTotal();
+    let textSummary = `${translate("Bill Summary")}:
+${translate("Total Bill")}: ${currencySymbol}${totalBill}
+${translate("Paid by")}: ${payer?.name || translate("Not specified")}
+
+${translate("Who Owes What")}:
+`;
+
+    people.forEach(person => {
+      if (person.id !== paidBy) {
+        const amountOwed = owes[person.id] || 0;
+        textSummary += `- ${person.name} ${translate("owes")} ${currencySymbol}${amountOwed.toFixed(2)}\n`;
+      }
+    });
+     if (paidBy && payer) {
+        textSummary += `\n${translate("Everyone should settle up with")} ${payer.name}.`;
+    }
+
+    try {
+      const shareOptions = {
+        title: translate('Share Bill Summary'),
+        message: textSummary,
+        social: Share.Social.WHATSAPP,
+        failOnCancel: false,
+      };
+      await Share.shareSingle(shareOptions);
+    } catch (error) {
+      console.error("Error sharing to WhatsApp:", error);
+      // Fallback to generic share if WhatsApp is not installed or other error
+      try {
+        await Share.open({ title: translate('Share Bill Summary'), message: textSummary, failOnCancel: false });
+      } catch (shareError) {
+        console.error("Error with generic share:", shareError);
+      }
+    }
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+        <View ref={summaryViewRef} collapsable={false} style={{backgroundColor: styles.safeArea.backgroundColor || '#E8F5E9'}}>
         {/* Progress Bar */}
         <View style={styles.progressBarContainer}>
           <View style={[styles.progressBar, { width: '100%' }]} />
@@ -596,6 +741,20 @@ export default function SummaryPage() {
             <Text style={styles.doneButtonText}>{translate("Done")}</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Sharing Buttons */}
+        <View style={styles.sharingButtonsContainer}>
+          <TouchableOpacity style={[styles.shareButtonBase, styles.pngButton]} onPress={captureSummaryAsImage}>
+            <Text style={styles.shareButtonText}>{translate("Download PNG")}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.shareButtonBase, styles.pdfButton]} onPress={generateSummaryAsPdf}>
+            <Text style={styles.shareButtonText}>{translate("Download PDF")}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.shareButtonBase, styles.whatsappButton]} onPress={shareToWhatsApp}>
+            <Text style={styles.shareButtonText}>{translate("Share via WhatsApp")}</Text>
+          </TouchableOpacity>
+        </View>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -604,7 +763,7 @@ export default function SummaryPage() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: '#E8F5E9', // Ensure this is defined, or use a default
   },
   container: {
     flex: 1,
@@ -869,29 +1028,66 @@ const styles = StyleSheet.create({
   navigationContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 10,
+    marginTop: 20,
+  },
+  sharingButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 15, 
+    marginBottom: 10,
+  },
+  shareButtonBase: { // Renamed from shareButton to shareButtonBase for clarity
+    flex: 1, // Distribute space equally
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginHorizontal: 5, // Add spacing between sharing buttons
+  },
+  shareButtonText: { // This style is fine as is
+    color: 'white', 
+    fontWeight: '500',
+    fontSize: 15,
+  },
+  pngButton: {
+    backgroundColor: '#4FC3F7', // Lighter Blue - e.g., Material Light Blue 300
+    // To make it look more like the "Done" button, we could use a similar green or a neutral color.
+    // For now, keeping distinct colors but slightly softer.
+  },
+  pdfButton: {
+    backgroundColor: '#E57373', // Lighter Red - e.g., Material Red 300
+  },
+  whatsappButton: {
+    backgroundColor: '#81C784', // Lighter Green - e.g., Material Green 300
   },
   backButton: {
     paddingVertical: 12,
-    paddingHorizontal: 16,
+    // paddingHorizontal: 16, // flex:1 handles width distribution
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#78909C',
     backgroundColor: 'white',
+    flex: 1,
+    marginRight: 5, // Adjusted margin for closer spacing if needed, or use marginHorizontal on shareButtonBase
+    alignItems: 'center',
   },
   backButtonText: {
     color: '#455A64',
     fontWeight: '500',
+    fontSize: 15,
   },
   doneButton: {
     paddingVertical: 12,
-    paddingHorizontal: 24,
+    // paddingHorizontal: 24, // flex:1 handles width distribution
     backgroundColor: '#2E7D32',
     borderRadius: 8,
+    flex: 1,
+    marginLeft: 5, // Adjusted margin
+    alignItems: 'center',
   },
   doneButtonText: {
     color: 'white',
     fontWeight: '500',
+    fontSize: 15,
   },
   payerCard: {
     borderWidth: 1,
