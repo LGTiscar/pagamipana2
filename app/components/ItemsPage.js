@@ -631,7 +631,12 @@ function ItemsPage(props) {
                       onPress={() => togglePersonForItem(index, person.id)}
                       style={[
                         styles.personBubble,
-                        isAssigned ? { borderColor: person.color } : styles.unassignedBubble
+                        // Apply shaded background color when selected OR when they have quantity > 0 for items with quantity > 1 and not shared
+                        (isAssigned || (showQuantityControls && !sharedItems[index] && personQuantity > 0)) ? { 
+                          borderColor: person.color,
+                          // Apply a light version of the user color as background when selected
+                          backgroundColor: `${person.color}20`, // 20 is 12.5% opacity in hex
+                        } : styles.unassignedBubble
                       ]}
                     >
                       {/* Avatar with initial */}
@@ -645,13 +650,19 @@ function ItemsPage(props) {
                       {/* Minus Button - only for quantity > 1 and not shared */}
                       {showQuantityControls && !sharedItems[index] && (
                         <TouchableOpacity 
-                          style={styles.inlineMinus}
+                          style={[
+                            styles.inlineMinus,
+                            personQuantity > 0 && { backgroundColor: `${person.color}30` }
+                          ]}
                           onPress={(e) => {
                             e.stopPropagation(); // Prevent parent touchable from firing
                             decreaseQuantity(index, person.id);
                           }}
                         >
-                          <Text style={styles.inlineButtonText}>−</Text>
+                          <Text style={[
+                            styles.inlineButtonText,
+                            personQuantity > 0 && { color: '#333333', fontWeight: 'bold' }
+                          ]}>−</Text>
                         </TouchableOpacity>
                       )}
                       
@@ -662,7 +673,10 @@ function ItemsPage(props) {
                       
                       {/* Quantity Value - only for quantity > 1 and not shared */}
                       {showQuantityControls && !sharedItems[index] && (
-                        <Text style={styles.inlineQuantity}>{personQuantity}</Text>
+                        <Text style={[
+                          styles.inlineQuantity, 
+                          personQuantity > 0 && { fontWeight: 'bold', color: '#333333' }
+                        ]}>{personQuantity}</Text>
                       )}
                       
                       {/* Plus Button - only for quantity > 1 and not shared */}
@@ -670,6 +684,7 @@ function ItemsPage(props) {
                         <TouchableOpacity 
                           style={[
                             styles.inlinePlus,
+                            personQuantity > 0 && { backgroundColor: `${person.color}30` },
                             // Different visual state based on shared status
                             (sharedItems[index]) 
                               // For shared items: disable only if this person has reached max quantity
@@ -684,6 +699,7 @@ function ItemsPage(props) {
                         >
                           <Text style={[
                             styles.inlineButtonText,
+                            personQuantity > 0 && { color: '#333333', fontWeight: 'bold' },
                             // Different visual state based on shared status
                             (sharedItems[index]) 
                               // For shared items: disable text only if this person has reached max quantity
@@ -837,7 +853,11 @@ function ItemsPage(props) {
                                 onPress={() => togglePersonForPortion(portionIndex, person.id)}
                                 style={[
                                   styles.personBubble,
-                                  isAssigned ? { borderColor: person.color } : styles.unassignedBubble
+                                  isAssigned ? { 
+                                    borderColor: person.color,
+                                    // Apply a light version of the user color as background when selected
+                                    backgroundColor: isAssigned ? `${person.color}20` : '#F5F5F5', // 20 is 12.5% opacity in hex
+                                  } : styles.unassignedBubble
                                 ]}
                               >
                                 {/* Avatar with initial */}
@@ -1229,6 +1249,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     borderWidth: 1,
     borderColor: '#E0E0E0',
+    elevation: 1, // Add slight elevation for Android
+    shadowColor: '#000', // Shadow for iOS
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 1,
   },
   unassignedBubble: {
     backgroundColor: '#F5F5F5',
@@ -1237,15 +1262,26 @@ const styles = StyleSheet.create({
   personBubbleText: {
     fontSize: 14,
     marginHorizontal: 8,
-    color: '#424242',
+    color: '#333333', // Slightly darker text for better contrast
+    fontWeight: '500', // Add a bit more weight for better visibility
   },
   inlineMinus: {
     marginLeft: 8,
     padding: 3,
+    borderRadius: 12,
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   inlinePlus: {
     marginLeft: 8,
     padding: 3,
+    borderRadius: 12,
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   inlineButtonText: {
     fontSize: 16,
